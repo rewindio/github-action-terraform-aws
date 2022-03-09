@@ -33,8 +33,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          ${{ fromJson(inputs.config) }}
+        workspace: ${{ fromJson(inputs.config) }}
     steps:
 
       - name: Check Mergable State

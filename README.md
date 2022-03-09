@@ -14,23 +14,19 @@ A reusable workflow for terraform github actions.
 
 ### Config
 
-A `terraform-config.json` is required so that workspaces can be shared between `terraform-plan` and `terraform-apply`.
+A `terraform-config.yml` is required so that workspaces can be shared between `terraform-plan` and `terraform-apply`.
 
-```json
-{
-  "profiles": {
-    "staging": [
-      {
-        "workspace": "foo-0"
-      }
-    ],
-    "production": [
-      {
-        "workspace": "foo-1"
-      }
-    ]
-  }
-}
+```yaml
+---
+profiles:
+  staging:
+    workspaces:
+      - foo1
+      - foo2
+  production:
+    workspaces:
+      - foo3
+      - foo4
 ```
 
 A `.terraform-version` file is required in the root of repo. This is a convention used by both [tfenv](https://github.com/tfutils/tfenv) and [tfswitch](https://github.com/warrensbox/terraform-switcher).
@@ -40,7 +36,7 @@ A `.terraform-version` file is required in the root of repo. This is a conventio
 
 ```yaml
 # .github/workflows/tf-fmt.yml
-name: tf-fmt
+name: terraform-fmt
 on: pull_request
 concurrency: terraform-fmt
 
@@ -69,10 +65,14 @@ jobs:
     steps:
     - name: checkout
       uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+    - name: yq - portable yaml processor
+      uses: mikefarah/yq@v4.21.1
     - id: set-config
       run: |
-        echo "::set-output name=staging-config::$(cat terraform-config.json | jq .profiles.staging -c)"
-        echo "::set-output name=production-config::$(cat terraform-config.json | jq .profiles.production -c)"
+        echo "::set-output name=staging-config::$(yq -o json -I 0 '.profiles.staging.workspaces' terraform-config.yml)"
+        echo "::set-output name=production-config::$(yq -o json -I 0 '.profiles.production.workspaces' terraform-config.yml)"
 
   terraform-plan-staging:
     name: "Terraform"
@@ -121,10 +121,14 @@ jobs:
     steps:
     - name: checkout
       uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+    - name: yq - portable yaml processor
+      uses: mikefarah/yq@v4.21.1
     - id: set-config
       run: |
-        echo "::set-output name=staging-config::$(cat terraform-config.json | jq .profiles.staging -c)"
-        echo "::set-output name=production-config::$(cat terraform-config.json | jq .profiles.production -c)"
+        echo "::set-output name=staging-config::$(yq -o json -I 0 '.profiles.staging.workspaces' terraform-config.yml)"
+        echo "::set-output name=production-config::$(yq -o json -I 0 '.profiles.production.workspaces' terraform-config.yml)"
 
   terraform-apply-staging:
     name: "Terraform"
