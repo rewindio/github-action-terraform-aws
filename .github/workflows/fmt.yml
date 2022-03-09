@@ -1,0 +1,45 @@
+name: Terraform Fmt
+
+on:
+  workflow_call:
+
+jobs:
+  terraform-fmt:
+    name: Format and Style
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set terraform version
+        id: set-terraform-version
+        run: echo "::set-output name=terraform-version::$(cat .terraform-version)"
+
+      - name: Terraform Setup
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: ${{ steps.set-terraform-version.outputs.terraform-version}}
+          terraform_wrapper: false
+
+      - name: Terraform Format
+        id: fmt
+        run: terraform fmt -check
+        continue-on-error: false
+
+      - name: Output Fmt Result
+        uses: actions/github-script@v2
+        if: github.event_name == 'pull_request'
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+
+            *Pusher: @${{ github.actor }}`;
+
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+

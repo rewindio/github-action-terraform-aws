@@ -1,0 +1,139 @@
+name: Terraform Plan
+
+on:
+  workflow_call:
+    inputs:
+      profile:
+        description: "The profile to use (from the config) throughout the workflow"
+        required: true
+        type: string
+      config:
+        description: "A JSON list of objects that include include a workspace key/value."
+        required: true
+        type: string
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        description: "The AWS Access Key ID for writing to the backend and managing resources."
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        description: "The AWS Secret Access Key for writing to the backend and managing resources."
+        required: true
+      GITHUB_PAT:
+        description: "A GitHub PAT used to initialize private submodules"
+        required: false
+
+jobs:
+  terraform-plan:
+    name: "Plan"
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    strategy:
+      fail-fast: false
+      matrix:
+        workspace: ${{ fromJson(inputs.config) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      # Allow private terraform modules to be initialized
+      - name: Setup git config
+        # if: secrets.GITHUB_PAT != '' # TODO: Make this optional
+        run: |
+          git config --global \
+            url."https://oauth2:${{ secrets.GITHUB_PAT }}@github.com".insteadOf https://github.com
+
+      - name: Set varfile
+        id: tfvars
+        run: |
+          # Construct tfvars pattern
+          # TODO: allow for optional override?
+          echo "::set-output name=tfvar_file::tfvars/${{ inputs.profile }}/${{ matrix.workspace }}.tfvars"
+
+      - name: Set terraform version
+        id: set-terraform-version
+        run: echo "::set-output name=terraform-version::$(cat .terraform-version)"
+
+      - name: Set terraform workspace
+        run: echo TF_WORKSPACE="${{ matrix.workspace }}" >> $GITHUB_ENV
+
+      - name: Terraform Setup
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: ${{ steps.set-terraform-version.outputs.terraform-version}}
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        id: init
+        run: |
+          # TODO: Allow for optional override
+          backend_file=backend/${{ inputs.profile }}.tfvars
+          echo "::set-output name=backend_file::$backend_file"
+          terraform init -backend-config "$backend_file"
+
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color
+
+      - name: Terraform Plan
+        id: plan
+        run: |
+          set -x
+          export prefix="::set-output name=exitcode::"
+          bash -c '(terraform plan -no-color \
+            -detailed-exitcode \
+            -var-file ${{ steps.init.outputs.backend_file }} \
+            -var-file ${{ steps.tfvars.outputs.tfvar_file }} \
+            -out terraform-${{ matrix.workspace }}.plan 2> terraform-${{ matrix.workspace }}-stderr.txt \
+            && echo "${prefix}${?}") || echo "${prefix}${?}"'
+          cat terraform-${{ matrix.workspace }}-stderr.txt
+          terraform show -no-color terraform-${{ matrix.workspace }}.plan > terraform-${{ matrix.workspace }}.txt
+          cat terraform-${{ matrix.workspace }}.txt | tail -c 65000 > trunc_plan.txt
+        continue-on-error: true
+
+      - name: Output Plan
+        uses: actions/github-script@v2
+        if: github.event_name == 'pull_request'
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require("fs");
+            const plan = (${{ steps.plan.outputs.exitcode }} == 1) ?
+              fs.readFileSync("./terraform-${{ matrix.workspace }}-stderr.txt").toString() :
+              fs.readFileSync("./trunc_plan.txt").toString();
+            const plan_outcome = (${{ steps.plan.outputs.exitcode }} == 0) ? "no changes" : "${{ steps.plan.outcome }}";
+            const output = `#### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
+            #### Terraform Plan 📖\`${plan_outcome}\`
+
+            <details><summary>Show Plan</summary>
+
+            \`\`\`terraform\n
+            ${ plan }
+            \`\`\`
+
+            </details>
+
+            *Pusher: @${{ github.actor }}, Workspace: \`${{ matrix.workspace }}\`*`;
+
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+
+      - name: Plan Failed
+        run: |
+          if [[ ${{ steps.plan.outputs.exitcode }} == "1" ]]
+          then
+            exit 1
+          fi
+
+      - name: Upload Plan Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: terraform-plan-${{ matrix.workspace }}.txt
+          path: ./terraform-${{ matrix.workspace }}.txt
+          retention-days: 5

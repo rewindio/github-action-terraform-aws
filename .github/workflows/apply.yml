@@ -1,0 +1,182 @@
+name: Terraform Apply
+
+on:
+  workflow_call:
+    inputs:
+      profile:
+        description: "The profile to use (from the config) throughout the workflow"
+        required: true
+        type: string
+      config:
+        description: "A JSON list of objects that include include a workspace key/value."
+        required: true
+        type: string
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        description: "The AWS Access Key ID for writing to the backend and managing resources."
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        description: "The AWS Secret Access Key for writing to the backend and managing resources."
+        required: true
+      GITHUB_PAT:
+        description: "A GitHub PAT used to initialize private submodules"
+        required: false
+
+jobs:
+  terraform-apply:
+    name: "Apply"
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    strategy:
+      fail-fast: false
+      matrix:
+        workspace: ${{ fromJson(inputs.config) }}
+    steps:
+
+      - name: Check Mergable State
+        id: mergable
+        run: |
+          set -eu
+          if [[ "${{ matrix.workspace }}" == "st"* ]]; then
+            # Always allow an apply for a staging environment
+            mergeable_state='clean'
+          else
+            resp=$(curl -sSf \
+              --url ${{ github.event.issue.pull_request.url }} \
+              --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
+              --header 'content-type: application/json')
+            mergeable_state=$(jq -r '.mergeable_state' <<< "$resp")
+          fi
+          echo "::set-output name=mergeable_state::$mergeable_state"
+
+      - name: Set varfile
+        id: tfvars
+        run: |
+          # Construct tfvars pattern
+          # TODO: allow for optional override?
+          echo "::set-output name=tfvar_file::tfvars/${{ inputs.profile }}/${{ matrix.workspace }}.tfvars"
+
+     # This step is needed because a comment on a PR is is in the scope of an issue
+      - name: Load PR Details
+        if: steps.mergable.outputs.mergeable_state == 'clean'
+        id: load-pr
+        run: |
+          set -eu
+          resp=$(curl -sSf \
+            --url ${{ github.event.issue.pull_request.url }} \
+            --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
+            --header 'content-type: application/json')
+          sha=$(jq -r '.head.sha' <<< "$resp")
+          echo "::set-output name=head_sha::$sha"
+          comments_url=$(jq -r '.comments_url' <<< "$resp")
+          echo "::set-output name=comments_url::$comments_url"
+
+      - name: Determine Command
+        if: steps.mergable.outputs.mergeable_state == 'clean'
+        id: determine-command
+        uses: actions/github-script@v2
+        env:
+          ENV_NAME: ${{ steps.tfvars.outputs.env_name }}
+        with:
+          github-token: ${{github.token}}
+          script: |
+            // console.log(context)
+            const body = context.payload.comment.body.toLowerCase().trim()
+            console.log("Detected PR comment: " + body)
+            console.log("This job is for workspace " + process.env.WORKSPACE)
+            commandArray = body.split(/\s+/)
+            if (commandArray[0] == "terraform") {
+              action = commandArray[1]
+              switch(action) {
+                case "apply":
+                  console.log("Validating apply action is for this job")
+                  if(typeof commandArray[2] === 'undefined') {
+                    console.log("Applying to all workspaces")
+                    console.log("::set-output name=do_apply::true")
+                  } else if (commandArray[2] == process.env.WORKSPACE) {
+                    console.log("applying to this workspace " + commandArray[2])
+                    console.log("::set-output name=do_apply::true")
+                  } else if (commandArray[2] == process.env.ENV_NAME) {
+                    console.log("applying to this environment " + commandArray[2])
+                    console.log("::set-output name=do_apply::true")
+                  } else {
+                    console.log("terraform apply command is not for this job")
+                  }
+                  break
+              }
+            }
+
+      - name: Comment if not approved
+        if: steps.mergable.outputs.mergeable_state != 'clean' && steps.determine-command.outputs.do_apply == 'true'
+        id: unmergable_comment
+        uses: peter-evans/create-or-update-comment@v1
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            :rotating_light: You cannot apply until the PR is approved and ready to merge
+          reactions: eyes
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      # Allow for private terraform modules to be initialized
+      - name: Setup Git Config
+        run: |
+          git config --global \
+            url."https://oauth2:${{ secrets.GITHUB_PAT }}@github.com".insteadOf https://github.com
+
+      - name: Set terraform version
+        id: set-terraform-version
+        run: echo "::set-output name=terraform-version::$(cat .terraform-version)"
+
+      - name: Set terraform workspace
+        run: echo TF_WORKSPACE="${{ matrix.workspace }}" >> $GITHUB_ENV
+
+      - name: Terraform Setup
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: ${{ steps.set-terraform-version.outputs.terraform-version}}
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        id: init
+        run: |
+          # TODO: Allow for optional override
+          backend_file=backend/${{ inputs.profile }}.tfvars
+          echo "::set-output name=backend_file::$backend_file"
+          terraform init -backend-config "$backend_file"
+
+      - name: Terraform Apply
+        id: apply
+        if: steps.mergable.outputs.mergeable_state == 'clean' && steps.determine-command.outputs.do_apply == 'true'
+        run: |
+          set -o pipefail
+          terraform apply -no-color -var-file ${{ steps.init.outputs.backend_file }} -var-file ${{ steps.tfvars.outputs.tfvars_file }} -auto-approve |& tee terraform-${{ env.WORKSPACE }}-apply-stdout.txt
+
+      - name: Display terraform apply results
+        uses: "actions/github-script@v2"
+        if: always() && steps.mergable.outputs.mergeable_state == 'clean' && steps.determine-command.outputs.do_apply == 'true'
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require("fs");
+            const apply = fs.readFileSync("./terraform-${{ env.WORKSPACE }}-apply-stdout.txt").toString();
+            const output = `#### Terraform Apply \`${{ steps.apply.outcome }}\`
+            <details><summary>Show Apply</summary>
+
+            \`\`\`terraform\n
+            ${ apply }
+            \`\`\`
+
+            </details>
+            Workspace: \`${{ env.WORKSPACE }}\`
+            `
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
