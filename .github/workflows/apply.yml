@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       profile:
-        description: "The profile to use (from the config) throughout the workflow"
+        description: "The AWS profile to use (from the config) throughout the workflow"
         required: true
         type: string
       config:
@@ -27,8 +27,8 @@ jobs:
     name: "Apply"
     runs-on: ubuntu-latest
     env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_SHARED_CREDENTIALS_FILE: /tmp/ac
+      AWS_PROFILE: ${{ inputs.profile }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     strategy:
       fail-fast: false
@@ -59,6 +59,9 @@ jobs:
           # TODO: allow for optional override?
           echo "::set-output name=tfvar_file::tfvars/${{ inputs.profile }}/${{ matrix.workspace }}.tfvars"
 
+      - name: Set terraform workspace
+        run: echo TF_WORKSPACE="${{ matrix.workspace }}" >> $GITHUB_ENV
+
      # This step is needed because a comment on a PR is is in the scope of an issue
       - name: Load PR Details
         if: steps.mergable.outputs.mergeable_state == 'clean'
@@ -86,7 +89,7 @@ jobs:
             // console.log(context)
             const body = context.payload.comment.body.toLowerCase().trim()
             console.log("Detected PR comment: " + body)
-            console.log("This job is for workspace " + process.env.WORKSPACE)
+            console.log("This job is for workspace " + process.env.TF_WORKSPACE)
             commandArray = body.split(/\s+/)
             if (commandArray[0] == "terraform") {
               action = commandArray[1]
@@ -96,7 +99,7 @@ jobs:
                   if(typeof commandArray[2] === 'undefined') {
                     console.log("Applying to all workspaces")
                     console.log("::set-output name=do_apply::true")
-                  } else if (commandArray[2] == process.env.WORKSPACE) {
+                  } else if (commandArray[2] == process.env.TF_WORKSPACE) {
                     console.log("applying to this workspace " + commandArray[2])
                     console.log("::set-output name=do_apply::true")
                   } else if (commandArray[2] == process.env.ENV_NAME) {
@@ -128,12 +131,17 @@ jobs:
           git config --global \
             url."https://oauth2:${{ secrets.GITHUB_PAT }}@github.com".insteadOf https://github.com
 
+      - name: Setup AWS credentials
+        run: |
+          cat <<EOF >> "$AWS_SHARED_CREDENTIALS_FILE"
+          [${{ inputs.profile }}]
+          aws_access_key_id = ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          EOF
+
       - name: Set terraform version
         id: set-terraform-version
         run: echo "::set-output name=terraform-version::$(cat .terraform-version)"
-
-      - name: Set terraform workspace
-        run: echo TF_WORKSPACE="${{ matrix.workspace }}" >> $GITHUB_ENV
 
       - name: Terraform Setup
         uses: hashicorp/setup-terraform@v1
@@ -153,8 +161,8 @@ jobs:
         id: apply
         if: steps.mergable.outputs.mergeable_state == 'clean' && steps.determine-command.outputs.do_apply == 'true'
         run: |
-          set -o pipefail
-          terraform apply -no-color -var-file ${{ steps.init.outputs.backend_file }} -var-file ${{ steps.tfvars.outputs.tfvars_file }} -auto-approve |& tee terraform-${{ env.WORKSPACE }}-apply-stdout.txt
+          set -xo pipefail
+          terraform apply -no-color -var-file ${{ steps.init.outputs.backend_file }} -var-file ${{ steps.tfvars.outputs.tfvar_file }} -auto-approve |& tee terraform-${{ env.TF_WORKSPACE }}-apply-stdout.txt
 
       - name: Display terraform apply results
         uses: "actions/github-script@v2"
@@ -163,7 +171,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require("fs");
-            const apply = fs.readFileSync("./terraform-${{ env.WORKSPACE }}-apply-stdout.txt").toString();
+            const apply = fs.readFileSync("./terraform-${{ env.TF_WORKSPACE }}-apply-stdout.txt").toString();
             const output = `#### Terraform Apply \`${{ steps.apply.outcome }}\`
             <details><summary>Show Apply</summary>
 
@@ -172,7 +180,8 @@ jobs:
             \`\`\`
 
             </details>
-            Workspace: \`${{ env.WORKSPACE }}\`
+
+            Workspace: \`${{ env.TF_WORKSPACE }}\`
             `
             github.issues.createComment({
               issue_number: context.issue.number,
@@ -180,3 +189,8 @@ jobs:
               repo: context.repo.repo,
               body: output
             })
+
+      - name: Cleanup AWS Credentials
+        if: always()
+        run: |
+          rm -f $AWS_SHARED_CREDENTIALS_FILE
