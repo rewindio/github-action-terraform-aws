@@ -27,8 +27,8 @@ jobs:
     name: "Plan"
     runs-on: ubuntu-latest
     env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_SHARED_CREDENTIALS_FILE: /tmp/ac
+      AWS_PROFILE: ${{ inputs.profile }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     strategy:
       fail-fast: false
@@ -44,6 +44,14 @@ jobs:
         run: |
           git config --global \
             url."https://oauth2:${{ secrets.GITHUB_PAT }}@github.com".insteadOf https://github.com
+
+      - name: Setup AWS credentials
+        run: |
+          cat <<EOF >> "$AWS_SHARED_CREDENTIALS_FILE"
+          [${{ inputs.profile }}]
+          aws_access_key_id = ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          EOF
 
       - name: Set varfile
         id: tfvars
@@ -137,3 +145,8 @@ jobs:
           name: terraform-plan-${{ matrix.workspace }}.txt
           path: ./terraform-${{ matrix.workspace }}.txt
           retention-days: 5
+
+      - name: Cleanup AWS Credentials
+        if: always()
+        run: |
+          rm -f $AWS_SHARED_CREDENTIALS_FILE
