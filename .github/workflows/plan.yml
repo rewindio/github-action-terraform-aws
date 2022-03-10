@@ -11,6 +11,10 @@ on:
         description: "A JSON list of objects that include include a workspace key/value."
         required: true
         type: string
+      cost_usage_file:
+        description: "A YAML file containing cloud resource usage estimates for Infracost"
+        required: false
+        type: string 
     secrets:
       AWS_ACCESS_KEY_ID:
         description: "The AWS Access Key ID for writing to the backend and managing resources."
@@ -116,18 +120,18 @@ jobs:
         run: |
           set -x
           export prefix="::set-output name=exitcode::"
+          USAGE_FILE=$([ -z "${{ inputs.cost_usage_file }}" ] && echo "" || echo "--usage-file ${{ inputs.cost_usage_file }}")
 
-          bash -c '(infracost breakdown --path ./terraform-${{ matrix.workspace }}.json \
+          bash -c '(infracost breakdown "${USAGE_FILE}" --path ./terraform-${{ matrix.workspace }}.json \
           --format json \
-          --out-file infracost-${{ matrix.workspace }}.json 2> infracost-${{ matrix.workspace }}-stdderr.txt \
+          --out-file infracost.json 2> infracost-stderr.txt \
           && echo "${prefix}${?}") || echo "${prefix}${?}"'
 
-          bash -c '(infracost output --path infracost-${{ matrix.workspace }}.json \
+          bash -c '(infracost output --path infracost.json \
           --format github-comment \
           --show-skipped \
-          --out-file infracost-${{ matrix.workspace }}.md 2> infracost-${{ matrix.workspace }}-stdderr.txt \
+          --out-file infracost.md 2> infracost-stdderr.txt \
           && echo "${prefix}${?}") || echo "${prefix}${?}"'
-          
         continue-on-error: true
 
       - name: Output Plan
