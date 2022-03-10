@@ -112,6 +112,8 @@ jobs:
         id: cost-estimate
         run: |
           set -x
+          infracost -v 
+          
           infracost breakdown --path terraform-${{ matrix.workspace }}.json \
           --format json \
           --out-file infracost-${{ matrix.workspace }}.json 2> infracost-${{ matrix.workspace }}-stderr.txt
