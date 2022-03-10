@@ -1,6 +1,6 @@
 # github-action-terraform
 
-A reusable workflow for terraform github actions.
+Reusable terraform github workflows.
 
 <!-- BEGIN mktoc -->
 - [Usage](#usage)

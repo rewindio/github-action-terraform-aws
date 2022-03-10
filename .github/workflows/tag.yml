@@ -1,6 +1,12 @@
 name: Tag version
 on:
   push:
+    branches:
+      - main
+    paths-ignore:
+      - '**/*.md'
+      - '*.md'
+      - 'LICENSE'
 
 jobs:
   build:
