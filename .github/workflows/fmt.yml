@@ -34,7 +34,7 @@ jobs:
           script: |
             const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
 
-            *Pusher: @${{ github.actor }}`;
+            *Pusher: @${{ github.actor }}*`;
 
             github.issues.createComment({
               issue_number: context.issue.number,
