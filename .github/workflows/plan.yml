@@ -113,15 +113,15 @@ jobs:
         run: |
           set -x
           infracost -v 
-          
-          infracost breakdown --path terraform-${{ matrix.workspace }}.json \
+
+          infracost breakdown --path ./terraform-${{ matrix.workspace }}.json \
           --format json \
-          --out-file infracost-${{ matrix.workspace }}.json 2> infracost-${{ matrix.workspace }}-stderr.txt
+          --out-file infracost-${{ matrix.workspace }}.json
 
           infracost output --path infracost-${{ matrix.workspace }}.json \
           --format github-comment \
           --show-skipped \
-          --out-file infracost-${{ matrix.workspace }}.md 2> infracost-${{ matrix.workspace }}-stderr.txt
+          --out-file infracost-${{ matrix.workspace }}.md
         continue-on-error: true
 
       - name: Output Plan
