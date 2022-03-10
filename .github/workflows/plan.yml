@@ -114,12 +114,12 @@ jobs:
           set -x
           infracost breakdown --path terraform-${{ matrix.workspace }}.json \
           --format json \
-          --out-file infracost-${{ matrix.workspace }}.json 2> infracost-$${{ matrix.workspace }}-stderr.txt
+          --out-file infracost-${{ matrix.workspace }}.json 2> infracost-${{ matrix.workspace }}-stderr.txt
 
           infracost output --path infracost-${{ matrix.workspace }}.json \
           --format github-comment \
           --show-skipped \
-          --out-file infracost-${{ matrix.workspace }}.md 2> infracost-$${{ matrix.workspace }}-stderr.txt
+          --out-file infracost-${{ matrix.workspace }}.md 2> infracost-${{ matrix.workspace }}-stderr.txt
         continue-on-error: true
 
       - name: Output Plan
@@ -133,9 +133,9 @@ jobs:
               fs.readFileSync("./terraform-${{ matrix.workspace }}-stderr.txt").toString() :
               fs.readFileSync("./trunc_plan.txt").toString();
             const plan_outcome = (${{ steps.plan.outputs.exitcode }} == 0) ? "no changes" : "${{ steps.plan.outcome }}";
-            const infracost_outcome = (${{ steps.cost-estimate.outputs.exitcode }} == 1)?
+            const infracost_outcome = (${{ steps.cost-estimate.outputs.exitcode }} == 1) ?
               fs.readFileSync("./infracost-${{ matrix.workspace }}-stderr.txt").toString() :
-              fs.readFileSynce("./infracost-${{ matrix.workspace }}.md").toString();
+              fs.readFileSync("./infracost-${{ matrix.workspace }}.md").toString();
         
             const output = `#### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
             #### Terraform Plan 📖\`${plan_outcome}\`
@@ -149,7 +149,7 @@ jobs:
             </details>
 
             ### Infracost Breakdown 
-            ${ infracost_outcome }
+            ${infracost_outcome}
 
             *Pusher: @${{ github.actor }}, Workspace: \`${{ matrix.workspace }}\`*`;
 
