@@ -122,7 +122,7 @@ jobs:
           export prefix="::set-output name=exitcode::"
           USAGE_FILE=$([ -z "${{ inputs.cost_usage_file }}" ] && echo "" || echo "--usage-file ${{ inputs.cost_usage_file }}")
 
-          bash -c '(infracost breakdown ${USAGE_FILE} --path ./terraform-${{ matrix.workspace }}.json \
+          bash -c '(infracost breakdown "${USAGE_FILE}" --path ./terraform-${{ matrix.workspace }}.json \
           --format json \
           --out-file infracost.json 2> infracost-stderr.txt \
           && echo "${prefix}${?}") || echo "${prefix}${?}"'
