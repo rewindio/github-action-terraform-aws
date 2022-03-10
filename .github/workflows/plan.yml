@@ -24,7 +24,7 @@ on:
       INFRACOST_API_KEY:
         description: " The Infracost API key for requests to the Infracost API"
         required: true
-        
+
 jobs:
   terraform-plan:
     name: "Plan"
@@ -115,16 +115,19 @@ jobs:
         id: cost-estimate
         run: |
           set -x
-          infracost -v 
+          export prefix="::set-output name=exitcode::"
 
-          infracost breakdown --path ./terraform-${{ matrix.workspace }}.json \
+          bash -c '(infracost breakdown --path ./terraform-${{ matrix.workspace }}.json \
           --format json \
-          --out-file infracost-${{ matrix.workspace }}.json
+          --out-file infracost-${{ matrix.workspace }}.json 2> infracost-${{ matrix.workspace }}-stdderr.txt \
+          && echo "${prefix}${?}") || echo "${prefix}${?}"'
 
-          infracost output --path infracost-${{ matrix.workspace }}.json \
+          bash -c '(infracost output --path infracost-${{ matrix.workspace }}.json \
           --format github-comment \
           --show-skipped \
-          --out-file infracost-${{ matrix.workspace }}.md
+          --out-file infracost-${{ matrix.workspace }}.md 2> infracost-${{ matrix.workspace }}-stdderr.txt \
+          && echo "${prefix}${?}") || echo "${prefix}${?}"'
+          
         continue-on-error: true
 
       - name: Output Plan
