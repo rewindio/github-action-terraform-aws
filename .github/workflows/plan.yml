@@ -104,7 +104,7 @@ jobs:
             && echo "${prefix}${?}") || echo "${prefix}${?}"'
           cat terraform-${{ matrix.workspace }}-stderr.txt
           terraform show -no-color terraform-${{ matrix.workspace }}.plan > terraform-${{ matrix.workspace }}.txt
-          terraform show -json terraform-${{ matrix.workspace }}.plan > terrform-${{ matrix.workspace }}.json 
+          terraform show -json terraform-${{ matrix.workspace }}.plan > terraform-${{ matrix.workspace }}.json 
           cat terraform-${{ matrix.workspace }}.txt | tail -c 65000 > trunc_plan.txt
         continue-on-error: true
 
