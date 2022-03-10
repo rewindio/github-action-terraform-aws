@@ -1,0 +1,49 @@
+name: Tag version
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**/*.md'
+      - '*.md'
+      - 'LICENSE'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      MAJOR_VERSION: 1
+      MINOR_VERSION: 0
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Remove tag for major version
+        uses: actions/github-script@v5
+        continue-on-error: true
+        with:
+          script: |
+            github.rest.git.deleteRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'tags/v' + process.env.MAJOR_VERSION,
+            })
+
+      - name: Create tag for major version
+        if: always()
+        uses: actions/github-script@v5
+        with:
+          script: |
+            github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'refs/tags/v' + process.env.MAJOR_VERSION,
+              sha: context.sha
+            })
+
+      - name: Bump version and push tag
+        uses: anothrNick/github-tag-action@1.36.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WITH_V: true
+          DEFAULT_BUMP: patch
+          INITIAL_VERSION: ${{ env.MAJOR_VERSION }}.${{ env.MINOR_VERSION }}.0
