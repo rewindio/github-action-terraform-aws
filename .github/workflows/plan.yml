@@ -122,7 +122,7 @@ jobs:
           export prefix="::set-output name=exitcode::"
           USAGE_FILE=$([ -z "${{ inputs.cost_usage_file }}" ] && echo "" || echo "--usage-file ${{ inputs.cost_usage_file }}")
 
-          bash -c '(infracost breakdown "${USAGE_FILE}" --path ./terraform-${{ matrix.workspace }}.json \
+          bash -c '(infracost breakdown ${USAGE_FILE} --path ./terraform-${{ matrix.workspace }}.json \
           --format json \
           --out-file infracost.json 2> infracost-stderr.txt \
           && echo "${prefix}${?}") || echo "${prefix}${?}"'
@@ -146,8 +146,8 @@ jobs:
               fs.readFileSync("./trunc_plan.txt").toString();
             const plan_outcome = (${{ steps.plan.outputs.exitcode }} == 0) ? "no changes" : "${{ steps.plan.outcome }}";
             const infracost_outcome = (${{ steps.cost-estimate.outputs.exitcode }} == 1) ?
-              fs.readFileSync("./infracost-${{ matrix.workspace }}-stderr.txt").toString() :
-              fs.readFileSync("./infracost-${{ matrix.workspace }}.md").toString();
+              fs.readFileSync("./infracost-stderr.txt").toString() :
+              fs.readFileSync("./infracost.md").toString();
         
             const output = `#### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
             #### Terraform Plan 📖\`${plan_outcome}\`
