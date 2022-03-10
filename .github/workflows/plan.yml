@@ -21,7 +21,10 @@ on:
       GITHUB_PAT:
         description: "A GitHub PAT used to initialize private submodules"
         required: false
-
+      INFRACOST_API_KEY:
+        description: " The Infracost API key for requests to the Infracost API"
+        required: true
+        
 jobs:
   terraform-plan:
     name: "Plan"
