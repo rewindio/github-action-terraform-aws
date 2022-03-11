@@ -80,9 +80,9 @@ jobs:
       - name: Determine Command
         if: steps.mergable.outputs.mergeable_state == 'clean'
         id: determine-command
-        uses: actions/github-script@v2
+        uses: actions/github-script@v6
         env:
-          ENV_NAME: ${{ steps.tfvars.outputs.env_name }}
+          ENV_NAME: ${{ inputs.profile }}
         with:
           github-token: ${{github.token}}
           script: |
@@ -165,7 +165,7 @@ jobs:
           terraform apply -no-color -var-file ${{ steps.init.outputs.backend_file }} -var-file ${{ steps.tfvars.outputs.tfvar_file }} -auto-approve |& tee terraform-${{ env.TF_WORKSPACE }}-apply-stdout.txt
 
       - name: Display terraform apply results
-        uses: "actions/github-script@v2"
+        uses: actions/github-script@v6
         if: always() && steps.mergable.outputs.mergeable_state == 'clean' && steps.determine-command.outputs.do_apply == 'true'
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -193,4 +193,4 @@ jobs:
       - name: Cleanup AWS Credentials
         if: always()
         run: |
-          rm -f $AWS_SHARED_CREDENTIALS_FILE
+          rm -f "$AWS_SHARED_CREDENTIALS_FILE"
