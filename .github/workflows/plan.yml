@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       profile:
-        description: "The profile to use (from the config) throughout the workflow"
+        description: "The AWS profile to use (from the config) throughout the workflow"
         required: true
         type: string
       config:
@@ -14,7 +14,7 @@ on:
       infracost_usage_file:
         description: "A YAML file containing cloud resource usage estimates for Infracost"
         required: false
-        type: string 
+        type: string
     secrets:
       AWS_ACCESS_KEY_ID:
         description: "The AWS Access Key ID for writing to the backend and managing resources."
@@ -189,4 +189,4 @@ jobs:
       - name: Cleanup AWS Credentials
         if: always()
         run: |
-          rm -f $AWS_SHARED_CREDENTIALS_FILE
+          rm -f "$AWS_SHARED_CREDENTIALS_FILE"

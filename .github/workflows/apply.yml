@@ -80,9 +80,9 @@ jobs:
       - name: Determine Command
         if: steps.mergable.outputs.mergeable_state == 'clean'
         id: determine-command
-        uses: actions/github-script@v2
+        uses: actions/github-script@v6
         env:
-          ENV_NAME: ${{ steps.tfvars.outputs.env_name }}
+          ENV_NAME: ${{ inputs.profile }}
         with:
           github-token: ${{github.token}}
           script: |
@@ -193,4 +193,4 @@ jobs:
       - name: Cleanup AWS Credentials
         if: always()
         run: |
-          rm -f $AWS_SHARED_CREDENTIALS_FILE
+          rm -f "$AWS_SHARED_CREDENTIALS_FILE"
