@@ -50,6 +50,10 @@ jobs:
 
 Plans are run when a pull request is open.
 
+Within the `terraform-plan` workflow, Infracost is ran to provide a cost estimate in the pull request. 
+
+The optional parameter `infracost_usage_file` is a YAML file that contains usage estimates for usage-based resources.
+
 ```yaml
 # .github/workflows/tf-plan.yml
 name: terraform-plan
@@ -81,10 +85,12 @@ jobs:
     with:
       config: ${{ needs.read-terraform-config.outputs.staging_config }}
       profile: staging
+      infracost_usage_file: infracost.yml # OPTIONAL parameter
     secrets:
       AWS_ACCESS_KEY_ID: ${{ secrets.MY_AWS_ACCESS_KEY_ID_STAGING }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.MY_AWS_SECRET_ACCESS_KEY_STAGING }}
       GITHUB_PAT: ${{ secrets.MY_GITHUB_PAT }}
+      INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
 
   terraform-plan-production:
     name: "Terraform"
@@ -93,10 +99,12 @@ jobs:
     with:
       config: ${{ needs.read-terraform-config.outputs.production_config }}
       profile: production
+      infracost_usage_file: infracost.yml # OPTIONAL parameter
     secrets:
       AWS_ACCESS_KEY_ID: ${{ secrets.MY_AWS_ACCESS_KEY_ID_STAGING }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.MY_AWS_SECRET_ACCESS_KEY_STAGING }}
       GITHUB_PAT: ${{ secrets.MY_GITHUB_PAT }}
+      INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
 ```
 
 ### Apply
