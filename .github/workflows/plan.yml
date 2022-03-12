@@ -7,8 +7,8 @@ on:
         description: "The AWS profile to use (from the config) throughout the workflow"
         required: true
         type: string
-      config:
-        description: "A JSON list of objects that include include a workspace key/value."
+      workspaces:
+        description: "A JSON Array that contains list of all workspaces to plan."
         required: true
         type: string
       infracost_usage_file:
@@ -85,12 +85,12 @@ jobs:
         with:
           api-key: ${{ secrets.INFRACOST_API_KEY }}
           currency: CAD
-          
+
       - name: Terraform Init
         id: init
         run: |
           # TODO: Allow for optional override
-          backend_file=backend/${{ inputs.profile }}.tfvars
+          backend_file=backends/${{ inputs.profile }}.tfvars
           echo "::set-output name=backend_file::$backend_file"
           terraform init -backend-config "$backend_file"
 
