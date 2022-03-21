@@ -40,10 +40,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        workspace: ${{ fromJson(inputs.config) }}
+        workspace: ${{ fromJson(inputs.workspaces) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          submodules: 'true'
+          token: ${{ secrets.GITHUB_PAT }} # Needed for private submodules
 
       # Allow private terraform modules to be initialized
       - name: Setup git config
@@ -90,7 +93,7 @@ jobs:
         id: init
         run: |
           # TODO: Allow for optional override
-          backend_file=backends/${{ inputs.profile }}.tfvars
+          backend_file=backend/${{ inputs.profile }}.tfvars
           echo "::set-output name=backend_file::$backend_file"
           terraform init -backend-config "$backend_file"
 

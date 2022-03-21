@@ -18,7 +18,7 @@ These workflows assume you are deploying to AWS and you are using terraform work
 
 A certain directory structure is assumed. Each workspace should correspond with a tfvar files that follows this pattern `./tfvars/{{profile}}/{{workspace}}.tfvars`.
 
-The backend file should also conform to `backends/{{profile}}.tfvars`.
+The backend file should also conform to `backend/{{profile}}.tfvars`.
 
 A `.terraform-version` file is required in the root of repo. This is a convention used by both [tfenv](https://github.com/tfutils/tfenv) and [tfswitch](https://github.com/warrensbox/terraform-switcher).
 
