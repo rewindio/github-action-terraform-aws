@@ -1,10 +1,10 @@
 # github-action-terraform
 
-Reusable terraform github workflows.
+Reusable terraform github workflows that deploy to AWS and provides cost estimates on PRs.
 
 <!-- BEGIN mktoc -->
 - [Usage](#usage)
-  - [Config](#config)
+  - [Prerequisites](#prerequisites)
   - [Fmt](#fmt)
   - [Plan](#plan)
   - [Apply](#apply)
@@ -12,22 +12,13 @@ Reusable terraform github workflows.
 
 ## Usage
 
-### Config
+### Prerequisites
 
-A `terraform-config.yml` is required so that workspaces can be shared between `terraform-plan` and `terraform-apply`.
+These workflows assume you are deploying to AWS and you are using terraform workspaces. It supports multiple AWS accounts, each supporting multiple workspaces. They also assume you are using [Infracost](https://www.infracost.io/) and have a valid API key.
 
-```yaml
----
-profiles:
-  staging:
-    workspaces:
-      - foo1
-      - foo2
-  production:
-    workspaces:
-      - foo3
-      - foo4
-```
+A certain directory structure is assumed. Each workspace should correspond with a tfvar files that follows this pattern `./tfvars/{{profile}}/{{workspace}}.tfvars`.
+
+The backend file should also conform to `backend/{{profile}}.tfvars`.
 
 A `.terraform-version` file is required in the root of repo. This is a convention used by both [tfenv](https://github.com/tfutils/tfenv) and [tfswitch](https://github.com/warrensbox/terraform-switcher).
 
@@ -50,40 +41,40 @@ jobs:
 
 Plans are run when a pull request is open.
 
-Within the `terraform-plan` workflow, Infracost is ran to provide a cost estimate in the pull request. 
+Within the `terraform-plan` workflow, Infracost is ran to provide a cost estimate in the pull request.
 
 The optional parameter `infracost_usage_file` is a YAML file that contains usage estimates for usage-based resources.
 
 ```yaml
 # .github/workflows/tf-plan.yml
+
 name: terraform-plan
 on: pull_request
 concurrency: terraform
 
 jobs:
-  read-terraform-config:
+  terraform-read-workspaces:
+    name: "Read Workspaces"
     runs-on: ubuntu-latest
     outputs:
-      staging_config: ${{ steps.set-config.outputs.staging-config }}
-      production_config: ${{ steps.set-config.outputs.production-config }}
+      staging_workspaces: ${{ steps.set-workspaces.outputs.staging-workspaces }}
+      production_workspaces: ${{ steps.set-workspaces.outputs.production-workspaces }}
     steps:
     - name: checkout
       uses: actions/checkout@v2
       with:
         fetch-depth: 1
-    - name: yq - portable yaml processor
-      uses: mikefarah/yq@v4.21.1
-    - id: set-config
+    - id: set-workspaces
       run: |
-        echo "::set-output name=staging-config::$(yq -o json -I 0 '.profiles.staging.workspaces' terraform-config.yml)"
-        echo "::set-output name=production-config::$(yq -o json -I 0 '.profiles.production.workspaces' terraform-config.yml)"
+        echo "::set-output name=staging-workspaces::$(find tfvars/staging -name "*.tfvars" -not -type d -exec basename {} \; | cut -d '.' -f1  | jq -R . | jq -cs)"
+        echo "::set-output name=production-workspaces::$(find tfvars/production -name "*.tfvars" -not -type d -exec basename {} \; | cut -d '.' -f1  | jq -R . | jq -cs)"
 
   terraform-plan-staging:
     name: "Terraform"
-    needs: read-terraform-config
+    needs: terraform-read-workspaces
     uses: rewindio/github-action-terraform/.github/workflows/plan.yml@v1
     with:
-      config: ${{ needs.read-terraform-config.outputs.staging_config }}
+      workspaces: ${{ needs.terraform-read-workspaces.outputs.staging_workspaces }}
       profile: staging
       infracost_usage_file: infracost.yml # OPTIONAL parameter
     secrets:
@@ -94,10 +85,10 @@ jobs:
 
   terraform-plan-production:
     name: "Terraform"
-    needs: read-terraform-config
+    needs: terraform-read-workspaces
     uses: rewindio/github-action-terraform/.github/workflows/plan.yml@v1
     with:
-      config: ${{ needs.read-terraform-config.outputs.production_config }}
+      workspaces: ${{ needs.terraform-read-workspaces.outputs.production_workspaces }}
       profile: production
       infracost_usage_file: infracost.yml # OPTIONAL parameter
     secrets:
@@ -121,29 +112,28 @@ on: pull_request
 concurrency: terraform
 
 jobs:
-  read-terraform-config:
+  terraform-read-workspaces:
+    name: "Read Workspaces"
     runs-on: ubuntu-latest
     outputs:
-      staging_config: ${{ steps.set-config.outputs.staging-config }}
-      production_config: ${{ steps.set-config.outputs.production-config }}
+      staging_workspaces: ${{ steps.set-workspaces.outputs.staging-workspaces }}
+      production_workspaces: ${{ steps.set-workspaces.outputs.production-workspaces }}
     steps:
     - name: checkout
       uses: actions/checkout@v2
       with:
         fetch-depth: 1
-    - name: yq - portable yaml processor
-      uses: mikefarah/yq@v4.21.1
-    - id: set-config
+    - id: set-workspaces
       run: |
-        echo "::set-output name=staging-config::$(yq -o json -I 0 '.profiles.staging.workspaces' terraform-config.yml)"
-        echo "::set-output name=production-config::$(yq -o json -I 0 '.profiles.production.workspaces' terraform-config.yml)"
+        echo "::set-output name=staging-workspaces::$(find tfvars/staging -name "*.tfvars" -not -type d -exec basename {} \; | cut -d '.' -f1  | jq -R . | jq -cs)"
+        echo "::set-output name=production-workspaces::$(find tfvars/production -name "*.tfvars" -not -type d -exec basename {} \; | cut -d '.' -f1  | jq -R . | jq -cs)"
 
   terraform-apply-staging:
     name: "Terraform"
-    needs: read-terraform-config
+    needs: terraform-read-workspaces
     uses: rewindio/github-action-terraform/.github/workflows/apply.yml@v1
     with:
-      config: ${{ needs.read-terraform-config.outputs.staging_config }}
+      workspaces: ${{ needs.terraform-read-workspaces.outputs.staging_workspaces }}
       profile: staging
     secrets:
       AWS_ACCESS_KEY_ID: ${{ secrets.MY_AWS_ACCESS_KEY_ID_STAGING }}
@@ -152,10 +142,10 @@ jobs:
 
   terraform-apply-production:
     name: "Terraform"
-    needs: read-terraform-config
+    needs: terraform-read-workspaces
     uses: rewindio/github-action-terraform/.github/workflows/apply.yml@v1
     with:
-      config: ${{ needs.read-terraform-config.outputs.production_config }}
+      workspaces: ${{ needs.terraform-read-workspaces.outputs.production_workspaces }}
       profile: production
     secrets:
       AWS_ACCESS_KEY_ID: ${{ secrets.MY_AWS_ACCESS_KEY_ID_STAGING }}

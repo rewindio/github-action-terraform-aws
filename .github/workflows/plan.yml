@@ -7,8 +7,8 @@ on:
         description: "The AWS profile to use (from the config) throughout the workflow"
         required: true
         type: string
-      config:
-        description: "A JSON list of objects that include include a workspace key/value."
+      workspaces:
+        description: "A JSON Array that contains list of all workspaces to plan."
         required: true
         type: string
       infracost_usage_file:
@@ -24,7 +24,7 @@ on:
         required: true
       GITHUB_PAT:
         description: "A GitHub PAT used to initialize private submodules"
-        required: false
+        required: true
       INFRACOST_API_KEY:
         description: " The Infracost API key for requests to the Infracost API"
         required: true
@@ -40,14 +40,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        workspace: ${{ fromJson(inputs.config) }}
+        workspace: ${{ fromJson(inputs.workspaces) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          submodules: 'true'
+          token: ${{ secrets.GITHUB_PAT }} # Needed for private submodules
 
       # Allow private terraform modules to be initialized
       - name: Setup git config
-        # if: secrets.GITHUB_PAT != '' # TODO: Make this optional
         run: |
           git config --global \
             url."https://oauth2:${{ secrets.GITHUB_PAT }}@github.com".insteadOf https://github.com
@@ -85,7 +87,7 @@ jobs:
         with:
           api-key: ${{ secrets.INFRACOST_API_KEY }}
           currency: CAD
-          
+
       - name: Terraform Init
         id: init
         run: |

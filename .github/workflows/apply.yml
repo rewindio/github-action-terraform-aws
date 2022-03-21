@@ -7,8 +7,8 @@ on:
         description: "The AWS profile to use (from the config) throughout the workflow"
         required: true
         type: string
-      config:
-        description: "A JSON list of objects that include include a workspace key/value."
+      workspaces:
+        description: "A JSON Array that contains list of all workspaces to apply."
         required: true
         type: string
     secrets:
@@ -20,7 +20,7 @@ on:
         required: true
       GITHUB_PAT:
         description: "A GitHub PAT used to initialize private submodules"
-        required: false
+        required: true
 
 jobs:
   terraform-apply:
@@ -33,7 +33,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        workspace: ${{ fromJson(inputs.config) }}
+        workspace: ${{ fromJson(inputs.workspaces) }}
     steps:
 
       - name: Check Mergable State
@@ -124,6 +124,10 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          submodules: 'true'
+          ref: ${{ steps.load-pr.outputs.head_sha }}
+          token: ${{ secrets.GITHUB_PAT }} # Needed for private submodules
 
       # Allow for private terraform modules to be initialized
       - name: Setup Git Config
