@@ -20,7 +20,7 @@ on:
         required: true
       GITHUB_PAT:
         description: "A GitHub PAT used to initialize private submodules"
-        required: false
+        required: true
 
 jobs:
   terraform-apply:
@@ -126,6 +126,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           submodules: 'true'
+          ref: ${{ steps.load-pr.outputs.head_sha }}
           token: ${{ secrets.GITHUB_PAT }} # Needed for private submodules
 
       # Allow for private terraform modules to be initialized
