@@ -1,4 +1,4 @@
-# github-action-terraform
+# github-action-terraform-aws
 
 Reusable terraform github workflows that deploy to AWS and provides cost estimates on PRs.
 
@@ -34,7 +34,7 @@ concurrency: terraform-fmt
 jobs:
   terraform-fmt:
     name: "Terraform"
-    uses: rewindio/github-action-terraform/.github/workflows/fmt.yml@v1
+    uses: rewindio/github-action-terraform-aws/.github/workflows/fmt.yml@v1
 ```
 
 ### Plan
@@ -72,7 +72,7 @@ jobs:
   terraform-plan-staging:
     name: "Terraform"
     needs: terraform-read-workspaces
-    uses: rewindio/github-action-terraform/.github/workflows/plan.yml@v1
+    uses: rewindio/github-action-terraform-aws/.github/workflows/plan.yml@v1
     with:
       workspaces: ${{ needs.terraform-read-workspaces.outputs.staging_workspaces }}
       profile: staging
@@ -86,7 +86,7 @@ jobs:
   terraform-plan-production:
     name: "Terraform"
     needs: terraform-read-workspaces
-    uses: rewindio/github-action-terraform/.github/workflows/plan.yml@v1
+    uses: rewindio/github-action-terraform-aws/.github/workflows/plan.yml@v1
     with:
       workspaces: ${{ needs.terraform-read-workspaces.outputs.production_workspaces }}
       profile: production
@@ -131,7 +131,7 @@ jobs:
   terraform-apply-staging:
     name: "Terraform"
     needs: terraform-read-workspaces
-    uses: rewindio/github-action-terraform/.github/workflows/apply.yml@v1
+    uses: rewindio/github-action-terraform-aws/.github/workflows/apply.yml@v1
     with:
       workspaces: ${{ needs.terraform-read-workspaces.outputs.staging_workspaces }}
       profile: staging
@@ -143,7 +143,7 @@ jobs:
   terraform-apply-production:
     name: "Terraform"
     needs: terraform-read-workspaces
-    uses: rewindio/github-action-terraform/.github/workflows/apply.yml@v1
+    uses: rewindio/github-action-terraform-aws/.github/workflows/apply.yml@v1
     with:
       workspaces: ${{ needs.terraform-read-workspaces.outputs.production_workspaces }}
       profile: production
