@@ -124,16 +124,22 @@ jobs:
           export prefix="::set-output name=exitcode::"
           export USAGE_FILE=$([ -z "${{ inputs.infracost_usage_file }}" ] && echo "" || echo "--usage-file ${{ inputs.infracost_usage_file }}")
 
-          bash -c '(infracost breakdown "${USAGE_FILE}" --path ./plan.json \
-          --format json \
-          --out-file infracost.json 2> infracost-stderr.txt \
-          && echo "${prefix}${?}") || echo "${prefix}${?}"'
+          if [[ -f "./plan.json" ]]; then
+            bash -c '(infracost breakdown "${USAGE_FILE}" --path ./plan.json \
+            --format json \
+            --no-color \
+            --out-file infracost.json 2> infracost-stderr.txt \
+            && echo "${prefix}${?}") || echo "${prefix}${?}"'
 
-          bash -c '(infracost output --path infracost.json \
-          --format github-comment \
-          --show-skipped \
-          --out-file infracost.md 2> infracost-stdderr.txt \
-          && echo "${prefix}${?}") || echo "${prefix}${?}"'
+            bash -c '(infracost output --path infracost.json \
+            --format github-comment \
+            --show-skipped \
+            --no-color \
+            --out-file infracost.md 2> infracost-stdderr.txt \
+            && echo "${prefix}${?}") || echo "${prefix}${?}"'
+          else
+            echo "terraform plan failed" >> infracost.md
+          fi
         continue-on-error: true
 
       - name: Output Plan
