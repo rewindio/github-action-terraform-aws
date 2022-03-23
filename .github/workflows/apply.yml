@@ -39,7 +39,7 @@ jobs:
       - name: Check Mergable State
         id: mergable
         run: |
-          set -eu
+          set -eux
           if [[ "${{ matrix.workspace }}" == "st"* ]]; then
             # Always allow an apply for a staging environment
             mergeable_state='clean'
@@ -50,6 +50,7 @@ jobs:
               --header 'content-type: application/json')
             mergeable_state=$(jq -r '.mergeable_state' <<< "$resp")
           fi
+          echo "The mergeable state is $mergeable_state"
           echo "::set-output name=mergeable_state::$mergeable_state"
 
       - name: Set varfile
