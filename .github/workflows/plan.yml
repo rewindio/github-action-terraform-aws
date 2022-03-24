@@ -138,7 +138,7 @@ jobs:
             --out-file infracost.md 2> infracost-stdderr.txt \
             && echo "${prefix}${?}") || echo "${prefix}${?}"'
           else
-            echo "terraform plan failed" >> infracost.md
+            echo "terraform plan failed" >> infracost.md && echo "${prefix}${?}"
           fi
         continue-on-error: true
 
