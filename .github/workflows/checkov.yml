@@ -1,0 +1,55 @@
+name: IaC static analysis 
+
+on:
+  workflow_call:
+    secrets:
+      GITHUB_PAT:
+        description: "A GitHub PAT used to initialize private submodules"
+        required: true
+
+jobs:
+  iac-static-analysis:
+    name: ""
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "Checkout"
+        id: checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: 'true'
+          ref: ${{ steps.load-pr.outputs.head_sha }}
+          token: ${{ secrets.GITHUB_PAT }} 
+      
+      - name: Setup Git Config
+        run: |
+          git config --global \
+            url."https://oauth2:${{ secrets.GITHUB_PAT }}@github.com".insteadOf https://github.com
+
+      - name: Run Checkov action
+        id: checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          quiet: true 
+          framework: terraform 
+          output_format: github_failed_only
+          download_external_modules: true
+
+      - name: Display Checkov results
+        id: report
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require("fs");
+            <details><summary>Checkov Report</summary>
+            
+            ${{ steps.checkov.outputs.results }}
+            </details>
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
