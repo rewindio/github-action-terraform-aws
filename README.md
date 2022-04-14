@@ -8,6 +8,7 @@ Reusable terraform github workflows that deploy to AWS and provides cost estimat
   - [Fmt](#fmt)
   - [Plan](#plan)
   - [Apply](#apply)
+  - [Checkov] (#checkov)
 <!-- END mktoc -->
 
 ## Usage
@@ -152,4 +153,21 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.MY_AWS_SECRET_ACCESS_KEY_STAGING }}
       GITHUB_PAT: ${{ secrets.MY_GITHUB_PAT }}
 
+```
+
+### Checkov
+
+Included in this workflow is the option to run static analysis on the Terraform code with Checkov. 
+
+```yaml
+# .github/workflows/tf-checkov.yml
+  name: terraform-static-analysis
+  on: pull_request
+  concurrency: checkov
+
+  checkov-static-analysis:
+    name: "checkov"
+    uses: rewindio/github-action-terraform-aws/.github/workflows/checkov.yml@v1
+    secrets:
+      GITHUB_PAT: ${{ secrets.MY_GITHUB_PAT }}
 ```
