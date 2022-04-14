@@ -34,7 +34,7 @@ jobs:
       - name: Set check_ids to skip
         id: skipped_checks
         run: |
-          SKIPPED_CHECKS=${{ inputs.skipped_check_ids }}
+          SKIPPED_CHECKS="${{ inputs.skipped_check_ids }}"
           echo "::set-output name=value::${SKIPPED_CHECKS:-""}"
 
       - name: Run Checkov action
