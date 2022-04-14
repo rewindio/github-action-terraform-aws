@@ -2,11 +2,6 @@ name: IaC static analysis
 
 on:
   workflow_call:
-    inputs:
-      skipped_check_ids:
-        description: "Comma separated Checkov check IDs to skip"
-        required: false
-        type: string
     secrets:
       GITHUB_PAT:
         description: "A GitHub PAT used to initialize private submodules"
@@ -14,7 +9,7 @@ on:
 
 jobs:
   iac-static-analysis:
-    name: ""
+    name: "Run static analysis"
     runs-on: ubuntu-latest
 
     steps:
@@ -31,12 +26,6 @@ jobs:
           git config --global \
             url."https://oauth2:${{ secrets.GITHUB_PAT }}@github.com".insteadOf https://github.com
 
-      - name: Set check_ids to skip
-        id: skipped_checks
-        run: |
-          SKIPPED_CHECKS="${{ inputs.skipped_check_ids }}"
-          echo "::set-output name=value::${SKIPPED_CHECKS:-""}"
-
       - name: Run Checkov action
         id: checkov
         uses: bridgecrewio/checkov-action@master
@@ -45,9 +34,7 @@ jobs:
           quiet: true 
           framework: terraform 
           output_format: github_failed_only
-          download_external_modules: true
-          skip_check: ${{ steps.skipped_checks.outputs.value }}
-
+          
       - name: Display Checkov results
         id: report_success
         uses: actions/github-script@v6
@@ -55,15 +42,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require("fs");
-            const skipped_ids = "${{ steps.skipped_checks.outputs.value }}";
-            let message = "";
-
-            if ( skipped_ids != "" ) {
-              message = `Check IDs ${skipped_ids} was skipped.`;
-            } 
-
             const output = `#### Static Analysis - No issues found :white_check_mark:
-            ${message}
 
             *Pusher: @${{ github.actor }}*`;
 
