@@ -141,15 +141,7 @@ jobs:
             echo "terraform plan failed" >> infracost.md && echo "${prefix}${?}"
           fi
         continue-on-error: true
-
-      - name: Checkov static analysis
-        id: checkov-static-analysis
-        uses: bridgecrewio/checkov-action@master
-        with:
-          quiet: true
-          output_format: github_failed_only
-          download_external_modules: true
-
+        
       - name: Output Plan
         uses: actions/github-script@v6
         if: github.event_name == 'pull_request'

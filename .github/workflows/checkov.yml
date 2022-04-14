@@ -2,6 +2,11 @@ name: IaC static analysis
 
 on:
   workflow_call:
+    inputs:
+      skipped_check_ids:
+        description: "Comma separated Checkov check IDs to skip"
+        required: false
+        type: string
     secrets:
       GITHUB_PAT:
         description: "A GitHub PAT used to initialize private submodules"
@@ -26,6 +31,12 @@ jobs:
           git config --global \
             url."https://oauth2:${{ secrets.GITHUB_PAT }}@github.com".insteadOf https://github.com
 
+      - name: Set check_ids to skip
+        id: skipped_checks
+        run: |
+          SKIPPED_CHECKS=${{ inputs.skipped_check_ids }}
+          echo "::set-output name=value::${SKIPPED_CHECKS:-""}"
+
       - name: Run Checkov action
         id: checkov
         uses: bridgecrewio/checkov-action@master
@@ -35,9 +46,10 @@ jobs:
           framework: terraform 
           output_format: github_failed_only
           download_external_modules: true
+          skip_check: ${{ steps.skipped_checks.outputs.value }}
 
-      - name: Display Checkov results
-        id: report
+      - name: Display Checkov failed results
+        id: report_failures
         if: ${{ failure() }}
         uses: actions/github-script@v6
         with:
