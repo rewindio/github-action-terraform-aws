@@ -56,10 +56,11 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require("fs");
+            const skipped_ids = ${{ steps.skipped_checks.outputs.value }}
             let message = "";
 
-            if (${{ steps.skipped_checks.outputs.value }} != "" ) {
-              message = `Check IDs ${{ steps.skipped_checks.outputs.value }} was skipped.`;
+            if ( skipped_ids != "" ) {
+              message = `Check IDs ${skipped_ids} was skipped.`;
             } 
 
             const output = `#### Static Analysis - No issues found :white_check_mark:
