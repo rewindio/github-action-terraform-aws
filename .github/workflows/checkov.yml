@@ -46,7 +46,7 @@ jobs:
             const fs = require("fs");
             <details><summary>Checkov Report</summary>
             
-            ${{ steps.checkov.outputs.results }}
+            ${CHECKOV_RESULTS}
             </details>
             github.rest.issues.createComment({
               issue_number: context.issue.number,
