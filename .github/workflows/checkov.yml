@@ -44,10 +44,17 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require("fs");
-            <details><summary>Checkov Report</summary>
-            
+            const output = `#### Static Analysis :warning:
+           
+
+            <details><summary>Show Checkov results</summary>
+
             ${CHECKOV_RESULTS}
+
             </details>
+
+            *Pusher: @${{ github.actor }}*`;
+
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
