@@ -48,7 +48,6 @@ jobs:
           download_external_modules: true
           skip_check: ${{ steps.skipped_checks.outputs.value }}
 
-
       - name: Display Checkov results
         id: report_success
         uses: actions/github-script@v6
