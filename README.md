@@ -8,6 +8,7 @@ Reusable terraform github workflows that deploy to AWS and provides cost estimat
   - [Fmt](#fmt)
   - [Plan](#plan)
   - [Apply](#apply)
+  - [Checkov] (#checkov)
 <!-- END mktoc -->
 
 ## Usage
@@ -154,4 +155,22 @@ jobs:
 
 ```
 
+### Checkov
 
+Included in this workflow is the option to run static analysis on the Terraform code with Checkov. 
+
+```yaml
+# .github/workflows/tf-checkov.yml
+  name: terraform-static-analysis
+  on: pull_request
+  concurrency: checkov
+
+  checkov-static-analysis:
+    name: "checkov"
+    uses: rewindio/github-action-terraform-aws/.github/workflows/checkov.yml@v1
+    with:
+      # optional input to specify which check_id(s) to skip. Provided as a comma separated list.
+      skipped_check_ids: "CKV_AWS_158,CKV_AWS_189,CKV_AWS_111,CKV_AWS_131,CKV_AWS_91,CKV2_AWS_15,CKV2_AWS_28" 
+    secrets:
+      GITHUB_PAT: ${{ secrets.MY_GITHUB_PAT }}
+```
