@@ -48,6 +48,32 @@ jobs:
           download_external_modules: true
           skip_check: ${{ steps.skipped_checks.outputs.value }}
 
+
+      - name: Display Checkov results
+        id: report_success
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require("fs");
+            let message = "";
+
+            if (${{ steps.skipped_checks.outputs.value }} != "" ) {
+              message = `Check IDs ${{ steps.skipped_checks.outputs.value }} was skipped.`;
+            } 
+
+            const output = `#### Static Analysis - No issues found :white_check_mark:
+            ${message}
+
+            *Pusher: @${{ github.actor }}*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+
       - name: Display Checkov failed results
         id: report_failures
         if: ${{ failure() }}
@@ -56,7 +82,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require("fs");
-            const output = `#### Static Analysis :warning:
+            const output = `#### Static Analysis - Issues found :warning:
           
             <details><summary>Show Checkov results</summary>
 
