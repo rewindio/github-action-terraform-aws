@@ -45,11 +45,10 @@ jobs:
           script: |
             const fs = require("fs");
             const output = `#### Static Analysis :warning:
-           
-
+          
             <details><summary>Show Checkov results</summary>
 
-            ${CHECKOV_RESULTS}
+            ${{ env.CHECKOV_RESULTS }}
 
             </details>
 
