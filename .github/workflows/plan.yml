@@ -141,7 +141,7 @@ jobs:
             echo "terraform plan failed" >> infracost.md && echo "${prefix}${?}"
           fi
         continue-on-error: true
-        
+
       - name: Output Plan
         uses: actions/github-script@v6
         if: github.event_name == 'pull_request'
