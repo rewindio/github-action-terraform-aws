@@ -123,7 +123,7 @@ jobs:
             const fs = require("fs");
             const output = `#### Static Analysis - No issues found :white_check_mark:
 
-            *Pusher: @${{ github.actor }}*`;
+            *Pusher: @${{ github.actor }}, Workspace: \`${{ matrix.workspace }}\`*`;
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,
@@ -148,7 +148,7 @@ jobs:
 
             </details>
 
-            *Pusher: @${{ github.actor }}*`;
+            *Pusher: @${{ github.actor }}, Workspace: \`${{ matrix.workspace }}\`*`;
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,
