@@ -129,7 +129,8 @@ jobs:
           quiet: true 
           framework: terraform_plan
           output_format: github_failed_only
-      
+        continue-on-error: true
+        
       - name: Infracost cost estimate
         id: cost-estimate
         run: |
