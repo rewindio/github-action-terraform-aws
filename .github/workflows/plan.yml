@@ -188,10 +188,7 @@ jobs:
             ${infracost_outcome}
 
             ### Static Analysis
-
-            <details><summary>Show Results</summary>
             ${checkov_outcome}
-            </details>
           
             *Pusher: @${{ github.actor }}, Workspace: \`${{ matrix.workspace }}\`*`;
 
