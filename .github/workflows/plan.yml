@@ -15,6 +15,10 @@ on:
         description: "A YAML file containing cloud resource usage estimates for Infracost"
         required: false
         type: string
+      run_static_analysis:
+        description: "Set to true to run static analysis"
+        required: false
+        type: boolean
     secrets:
       AWS_ACCESS_KEY_ID:
         description: "The AWS Access Key ID for writing to the backend and managing resources."
@@ -113,10 +117,19 @@ jobs:
             && echo "${prefix}${?}") || echo "${prefix}${?}"'
           cat terraform-${{ matrix.workspace }}-stderr.txt
           terraform show -no-color terraform-${{ matrix.workspace }}.plan > terraform-${{ matrix.workspace }}.txt
-          terraform show -json terraform-${{ matrix.workspace }}.plan > plan.json 
+          terraform show -json terraform-${{ matrix.workspace }}.plan | jq . > plan.json 
           cat terraform-${{ matrix.workspace }}.txt | tail -c 65000 > trunc_plan.txt
         continue-on-error: true
 
+      - name: Checkov static Analysis
+        id: static-analysis
+        if: ${{ github.event.input.run_static_analysis == 'true' }}
+        uses: bridgecrewio/checkov-action@master
+        with:
+          quiet: true 
+          framework: terraform_plan
+          output_format: github_failed_only
+      
       - name: Infracost cost estimate
         id: cost-estimate
         run: |
@@ -170,6 +183,50 @@ jobs:
 
             ### Infracost Breakdown 
             ${infracost_outcome}
+
+            *Pusher: @${{ github.actor }}, Workspace: \`${{ matrix.workspace }}\`*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+    
+      - name: Post Checkov results - Passed
+        id: report_success
+        uses: actions/github-script@v6
+        if: steps.static-analysis.outcome == 'success'
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require("fs");
+            const output = `#### Static Analysis - No issues found :white_check_mark:
+
+            *Pusher: @${{ github.actor }}, Workspace: \`${{ matrix.workspace }}\`*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+      
+      - name: Post Checkov results - Failed
+        id: report_failures
+        if: steps.static-analysis.outcome == 'failure'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require("fs");
+            const output = `#### Static Analysis - Issues found :warning:
+          
+            <details><summary>Show Checkov results</summary>
+
+            ${{ env.CHECKOV_RESULTS }}
+
+            </details>
 
             *Pusher: @${{ github.actor }}, Workspace: \`${{ matrix.workspace }}\`*`;
 
