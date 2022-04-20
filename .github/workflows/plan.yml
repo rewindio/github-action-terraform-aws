@@ -123,7 +123,7 @@ jobs:
 
       - name: Checkov static Analysis
         id: static-analysis
-        if: ${{ inputs.run_static_analysis == 'true' }}
+        if: ${{ inputs.run_static_analysis == true }}
         uses: bridgecrewio/checkov-action@master
         with:
           quiet: true 
@@ -169,10 +169,11 @@ jobs:
             const infracost_outcome = (${{ steps.cost-estimate.outputs.exitcode }} == 1) ?
               fs.readFileSync("./infracost-stderr.txt").toString() :
               fs.readFileSync("./infracost.md").toString();
-
-            const output = `#### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
             const checkov_outcome = (${{ inputs.run_static_analysis }}) ?
               "${{ env.CHECKOV_RESULTS }}" : "Static analysis was skipped";
+
+            const output = `#### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
+
 
             #### Terraform Plan 📖\`${plan_outcome}\`
 
@@ -190,7 +191,7 @@ jobs:
             ### Static Analysis
 
             <details><summary>Show Results</summary>
-              ${checkov_outcome}
+            ${checkov_outcome}
             </details>
           
             *Pusher: @${{ github.actor }}, Workspace: \`${{ matrix.workspace }}\`*`;
