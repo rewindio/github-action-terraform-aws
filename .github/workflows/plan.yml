@@ -123,7 +123,7 @@ jobs:
 
       - name: Checkov static Analysis
         id: static-analysis
-        if: ${{ github.event.input.run_static_analysis == 'true' }}
+        if: ${{ inputs.run_static_analysis == 'true' }}
         uses: bridgecrewio/checkov-action@master
         with:
           quiet: true 
@@ -184,49 +184,14 @@ jobs:
             ### Infracost Breakdown 
             ${infracost_outcome}
 
-            *Pusher: @${{ github.actor }}, Workspace: \`${{ matrix.workspace }}\`*`;
-
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: output
-            })
-    
-      - name: Post Checkov results - Passed
-        id: report_success
-        uses: actions/github-script@v6
-        if: steps.static-analysis.outcome == 'success'
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require("fs");
-            const output = `#### Static Analysis - No issues found :white_check_mark:
-
-            *Pusher: @${{ github.actor }}, Workspace: \`${{ matrix.workspace }}\`*`;
-
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: output
-            })
-      
-      - name: Post Checkov results - Failed
-        id: report_failures
-        if: steps.static-analysis.outcome == 'failure'
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require("fs");
-            const output = `#### Static Analysis - Issues found :warning:
-          
-            <details><summary>Show Checkov results</summary>
-
-            ${{ env.CHECKOV_RESULTS }}
-
-            </details>
+            ### Static Analysis
+            if (${{ inputs.run_static_analysis }} == 'true') {
+              <details><summary>Show Results</summary>
+              ${{ env.CHECKOV_RESULTS }}
+              </details>
+            } else {
+              Static analysis was skipped.
+            }
 
             *Pusher: @${{ github.actor }}, Workspace: \`${{ matrix.workspace }}\`*`;
 
