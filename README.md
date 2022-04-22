@@ -8,7 +8,6 @@ Reusable terraform github workflows that deploy to AWS and provides cost estimat
   - [Fmt](#fmt)
   - [Plan](#plan)
   - [Apply](#apply)
-  - [Checkov] (#checkov)
 <!-- END mktoc -->
 
 ## Usage
@@ -99,6 +98,7 @@ jobs:
       workspaces: ${{ needs.terraform-read-workspaces.outputs.production_workspaces }}
       profile: production
       infracost_usage_file: infracost.yml # OPTIONAL parameter
+      run_static_analysis: true # OPTIONAL paramter; defaults to false
     secrets:
       AWS_ACCESS_KEY_ID: ${{ secrets.MY_AWS_ACCESS_KEY_ID_STAGING }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.MY_AWS_SECRET_ACCESS_KEY_STAGING }}
