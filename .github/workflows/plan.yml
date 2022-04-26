@@ -15,10 +15,6 @@ on:
         description: "A YAML file containing cloud resource usage estimates for Infracost"
         required: false
         type: string
-      run_static_analysis:
-        description: "Set to true to run static analysis"
-        required: false
-        type: boolean
     secrets:
       AWS_ACCESS_KEY_ID:
         description: "The AWS Access Key ID for writing to the backend and managing resources."
@@ -121,16 +117,6 @@ jobs:
           cat terraform-${{ matrix.workspace }}.txt | tail -c 65000 > trunc_plan.txt
         continue-on-error: true
 
-      - name: Checkov static analysis
-        id: static-analysis
-        if: ${{ inputs.run_static_analysis == true }}
-        uses: bridgecrewio/checkov-action@master
-        with:
-          quiet: true 
-          framework: terraform_plan
-          output_format: github_failed_only
-        continue-on-error: true
-        
       - name: Infracost cost estimate
         id: cost-estimate
         run: |
@@ -170,8 +156,6 @@ jobs:
             const infracost_outcome = (${{ steps.cost-estimate.outputs.exitcode }} == 1) ?
               fs.readFileSync("./infracost-stderr.txt").toString() :
               fs.readFileSync("./infracost.md").toString();
-            const checkov_outcome = (${{ inputs.run_static_analysis }}) ?
-              `${{ env.CHECKOV_RESULTS }}` : "Static analysis was skipped";
 
             const output = `#### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
 
@@ -187,10 +171,7 @@ jobs:
 
             ### Infracost Breakdown 
             ${infracost_outcome}
-
-            ### Static Analysis
-            ${checkov_outcome}
-          
+                      
             *Pusher: @${{ github.actor }}, Workspace: \`${{ matrix.workspace }}\`*`;
 
             github.rest.issues.createComment({

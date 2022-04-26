@@ -1,0 +1,33 @@
+name: Static analysis
+
+on:
+  workflow_call:
+    secrets:
+      GITHUB_PAT:
+        description: "A GitHub PAT used to initialize private submodules"
+        required: true
+
+jobs:
+  terraform-plan:
+    name: "Plan"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: 'true'
+          token: ${{ secrets.GITHUB_PAT }} # Needed for private submodules
+
+      # Allow private terraform modules to be initialized
+      - name: Setup git config
+        run: |
+          git config --global \
+            url."https://oauth2:${{ secrets.GITHUB_PAT }}@github.com".insteadOf https://github.com
+      
+      - name: Checkov static analysis
+        id: static-analysis
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          framework: terraform
+          output_format: cli

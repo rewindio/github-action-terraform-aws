@@ -1,11 +1,12 @@
 # github-action-terraform-aws
 
-Reusable terraform github workflows that deploy to AWS and provides cost estimates on PRs.
+Reusable terraform github workflows that deploy to AWS, provides cost estimates on PRs and static anaylsis using Checkov.
 
 <!-- BEGIN mktoc -->
 - [Usage](#usage)
   - [Prerequisites](#prerequisites)
   - [Fmt](#fmt)
+  - [Checkov](#checkov)
   - [Plan](#plan)
   - [Apply](#apply)
 <!-- END mktoc -->
@@ -37,6 +38,25 @@ jobs:
     uses: rewindio/github-action-terraform-aws/.github/workflows/fmt.yml@v1
 ```
 
+### Checkov
+
+Static analysis using Checkov can be performed by including `checkov.yml` into the workflow
+
+```yaml
+# .github/workflows/checkov.yml
+
+name: checkov
+concurrency: checkov
+on: pull_request
+
+jobs:
+  checkov-static-analysis:
+    name: "checkov"
+    uses: rewindio/github-action-terraform-aws/.github/workflows/checkov.yml@v1
+    secrets:
+      GITHUB_PAT: ${{ secrets.MY_GITHUB_PAT }}
+```
+
 ### Plan
 
 Plans are run when a pull request is open.
@@ -45,11 +65,6 @@ Within the `terraform-plan` workflow, Infracost is ran to provide a cost estimat
 
 The optional parameter `infracost_usage_file` is a YAML file that contains usage estimates for usage-based resources.
 
-#### Checkov
-
-Static analysis using Checkov can be performed by toggling the optional parameter `run_static_analysis`.
-
-To enable static analysis, set `run_static_analysis` to `true`.
 
 ```yaml
 # .github/workflows/tf-plan.yml
@@ -83,7 +98,6 @@ jobs:
       workspaces: ${{ needs.terraform-read-workspaces.outputs.staging_workspaces }}
       profile: staging
       infracost_usage_file: infracost.yml # OPTIONAL parameter
-      run_static_analysis: true # OPTIONAL paramter; defaults to false
     secrets:
       AWS_ACCESS_KEY_ID: ${{ secrets.MY_AWS_ACCESS_KEY_ID_STAGING }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.MY_AWS_SECRET_ACCESS_KEY_STAGING }}
@@ -98,7 +112,6 @@ jobs:
       workspaces: ${{ needs.terraform-read-workspaces.outputs.production_workspaces }}
       profile: production
       infracost_usage_file: infracost.yml # OPTIONAL parameter
-      run_static_analysis: true # OPTIONAL paramter; defaults to false
     secrets:
       AWS_ACCESS_KEY_ID: ${{ secrets.MY_AWS_ACCESS_KEY_ID_STAGING }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.MY_AWS_SECRET_ACCESS_KEY_STAGING }}
