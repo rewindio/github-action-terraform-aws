@@ -24,11 +24,11 @@ jobs:
       - name: Terraform Format
         id: fmt
         run: terraform fmt -recursive -check
-        continue-on-error: false
+        continue-on-error: true
 
       - name: Output Fmt Result
         uses: actions/github-script@v2
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' and steps.fmt.outcome != 'success'
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
