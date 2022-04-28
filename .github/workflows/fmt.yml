@@ -23,16 +23,25 @@ jobs:
 
       - name: Terraform Format
         id: fmt
-        run: terraform fmt -recursive -check
-        continue-on-error: true
+        run: |
+          terraform fmt -recursive -check=true -write=false -diff > terraform-fmt.diff
+          terraform fmt -recursive -check
 
       - name: Output Fmt Result
         uses: actions/github-script@v2
-        if: github.event_name == 'pull_request' && steps.fmt.outcome != 'success'
+        if: always() && github.event_name == 'pull_request' && steps.fmt.outcome != 'success'
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+            const fs = require("fs");
+            const fmt_diff = fs.readFileSync("./terraform-fmt.diff").toString();
+            const output = `#### Terraform Format: 
+
+            Terraform format failed! Run \`terraform fmt -recursive\` to fix this!
+
+            \`\`\`diff
+            ${ fmt_diff }
+            \`\`\`
 
             *Pusher: @${{ github.actor }}*`;
 
