@@ -28,7 +28,7 @@ jobs:
 
       - name: Output Fmt Result
         uses: actions/github-script@v2
-        if: github.event_name == 'pull_request' and steps.fmt.outcome != 'success'
+        if: github.event_name == 'pull_request' && steps.fmt.outcome != 'success'
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
