@@ -11,6 +11,16 @@ on:
         description: "A JSON Array that contains list of all workspaces to apply."
         required: true
         type: string
+      terraform_dir:
+        description: "The path to the terraform files"
+        required: false
+        type: string
+        default: .
+      setup_script:
+        description: "Additional setup to be run before apply (i.e. export TF_VAR)"
+        required: false
+        type: string
+        default: .
     secrets:
       AWS_ACCESS_KEY_ID:
         description: "The AWS Access Key ID for writing to the backend and managing resources."
@@ -156,6 +166,7 @@ jobs:
 
       - name: Terraform Init
         id: init
+        working-directory: ${{ inputs.terraform_dir }}
         run: |
           # TODO: Allow for optional override
           backend_file=backend/${{ inputs.profile }}.tfvars
@@ -164,19 +175,21 @@ jobs:
 
       - name: Terraform Apply
         id: apply
+        working-directory: ${{ inputs.terraform_dir }}
         if: steps.mergable.outputs.mergeable_state == 'clean' && steps.determine-command.outputs.do_apply == 'true'
         run: |
           set -xo pipefail
+          ${{ inputs.setup_script }}
           terraform apply -no-color -var-file ${{ steps.init.outputs.backend_file }} -var-file ${{ steps.tfvars.outputs.tfvar_file }} -auto-approve |& tee terraform-${{ env.TF_WORKSPACE }}-apply-stdout.txt
 
       - name: Display terraform apply results
         uses: actions/github-script@v6
-        if: always() && steps.mergable.outputs.mergeable_state == 'clean' && steps.determine-command.outputs.do_apply == 'true'
+        if: always() && github.ref != 'refs/heads/main' && steps.mergable.outputs.mergeable_state == 'clean' && steps.determine-command.outputs.do_apply == 'true'
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require("fs");
-            const apply = fs.readFileSync("./terraform-${{ env.TF_WORKSPACE }}-apply-stdout.txt").toString();
+            const apply = fs.readFileSync("${{ inputs.terraform_dir }}/terraform-${{ env.TF_WORKSPACE }}-apply-stdout.txt").toString();
             const output = `#### Terraform Apply \`${{ steps.apply.outcome }}\`
             <details><summary>Show Apply</summary>
 
