@@ -96,10 +96,12 @@ jobs:
         id: init
         working-directory: ${{ inputs.terraform_dir }}
         run: |
-          # TODO: Allow for optional override
           backend_file=backend/${{ inputs.profile }}.tfvars
           echo "::set-output name=backend_file::$backend_file"
           terraform init -backend-config "$backend_file"
+
+          # Create workspace if non-existent
+          terraform workspace new "${{ matrix.workspace }}" || true
 
       - name: Terraform Validate
         id: validate
