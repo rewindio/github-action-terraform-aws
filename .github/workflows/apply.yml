@@ -60,14 +60,12 @@ jobs:
               --header 'content-type: application/json')
             mergeable_state=$(jq -r '.mergeable_state' <<< "$resp")
           fi
-          echo "The mergeable state is $mergeable_state"
           echo "::set-output name=mergeable_state::$mergeable_state"
 
       - name: Set varfile
         id: tfvars
         run: |
           # Construct tfvars pattern
-          # TODO: allow for optional override?
           echo "::set-output name=tfvar_file::tfvars/${{ inputs.profile }}/${{ matrix.workspace }}.tfvars"
 
       - name: Set terraform workspace
@@ -75,7 +73,7 @@ jobs:
 
      # This step is needed because a comment on a PR is is in the scope of an issue
       - name: Load PR Details
-        if: steps.mergable.outputs.mergeable_state == 'clean'
+        if: steps.mergable.outputs.mergeable_state == 'clean' && github.ref != 'refs/heads/main'
         id: load-pr
         run: |
           set -eu
@@ -85,11 +83,9 @@ jobs:
             --header 'content-type: application/json')
           sha=$(jq -r '.head.sha' <<< "$resp")
           echo "::set-output name=head_sha::$sha"
-          comments_url=$(jq -r '.comments_url' <<< "$resp")
-          echo "::set-output name=comments_url::$comments_url"
 
       - name: Determine Command
-        if: steps.mergable.outputs.mergeable_state == 'clean'
+        if: steps.mergable.outputs.mergeable_state == 'clean' && github.ref != 'refs/heads/main'
         id: determine-command
         uses: actions/github-script@v6
         env:
@@ -97,7 +93,6 @@ jobs:
         with:
           github-token: ${{github.token}}
           script: |
-            // console.log(context)
             const body = context.payload.comment.body.toLowerCase().trim()
             console.log("Detected PR comment: " + body)
             console.log("This job is for workspace " + process.env.TF_WORKSPACE)
@@ -124,7 +119,7 @@ jobs:
             }
 
       - name: Comment if not approved
-        if: steps.mergable.outputs.mergeable_state != 'clean' && steps.determine-command.outputs.do_apply == 'true'
+        if: steps.mergable.outputs.mergeable_state != 'clean' && steps.determine-command.outputs.do_apply == 'true' && github.ref != 'refs/heads/main'
         id: unmergable_comment
         uses: peter-evans/create-or-update-comment@v1
         with:
@@ -133,11 +128,19 @@ jobs:
             :rotating_light: You cannot apply until the PR is approved and ready to merge
           reactions: eyes
 
-      - name: Checkout
+      - name: Checkout branch
         uses: actions/checkout@v2
+        if: github.ref != 'refs/heads/main'
         with:
           submodules: 'true'
           ref: ${{ steps.load-pr.outputs.head_sha }}
+          token: ${{ secrets.GITHUB_PAT }} # Needed for private submodules
+
+      - name: Checkout main
+        uses: actions/checkout@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          submodules: 'true'
           token: ${{ secrets.GITHUB_PAT }} # Needed for private submodules
 
       # Allow for private terraform modules to be initialized
@@ -168,7 +171,6 @@ jobs:
         id: init
         working-directory: ${{ inputs.terraform_dir }}
         run: |
-          # TODO: Allow for optional override
           backend_file=backend/${{ inputs.profile }}.tfvars
           echo "::set-output name=backend_file::$backend_file"
           terraform init -backend-config "$backend_file"
@@ -176,7 +178,7 @@ jobs:
       - name: Terraform Apply
         id: apply
         working-directory: ${{ inputs.terraform_dir }}
-        if: steps.mergable.outputs.mergeable_state == 'clean' && steps.determine-command.outputs.do_apply == 'true'
+        if: steps.mergable.outputs.mergeable_state == 'clean' && steps.determine-command.outputs.do_apply == 'true' || github.ref == 'refs/heads/main'
         run: |
           set -xo pipefail
           ${{ inputs.setup_script }}
