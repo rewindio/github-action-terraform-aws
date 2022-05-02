@@ -85,7 +85,7 @@ jobs:
           echo "::set-output name=head_sha::$sha"
 
       - name: Determine Command
-        if: steps.mergable.outputs.mergeable_state == 'clean' && github.event.issue.pull_request 
+        if: github.event.issue.pull_request 
         id: determine-command
         uses: actions/github-script@v6
         env:
@@ -118,14 +118,16 @@ jobs:
               }
             }
 
-      - name: Comment if not run
-        if: steps.determine-command.outcome == 'skipped'
+      - name: Comment if not approved
+        if: github.event.issue.pull_request && steps.mergable.outputs.mergeable_state != 'clean' && steps.determine-command.outputs.do_apply == 'true'
         id: unmergable_comment
-        uses: peter-evans/create-or-update-comment@v1
+        uses: peter-evans/create-or-update-comment@v2
         with:
           issue-number: ${{ github.event.issue.number }}
           body: |
             :rotating_light: You cannot apply until the PR is both approved and ready to merge
+
+            Workspace: `${{ env.TF_WORKSPACE }}`
           reactions: eyes
 
       - name: Checkout branch
