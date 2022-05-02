@@ -118,14 +118,14 @@ jobs:
               }
             }
 
-      - name: Comment if not approved
-        if: steps.mergable.outputs.mergeable_state != 'clean' && steps.determine-command.outputs.do_apply == 'true' && github.event.issue.pull_request 
+      - name: Comment if not run
+        if: steps.determine-command.outcome == 'skipped'
         id: unmergable_comment
         uses: peter-evans/create-or-update-comment@v1
         with:
           issue-number: ${{ github.event.issue.number }}
           body: |
-            :rotating_light: You cannot apply until the PR is approved and ready to merge
+            :rotating_light: You cannot apply until the PR is both approved and ready to merge
           reactions: eyes
 
       - name: Checkout branch
