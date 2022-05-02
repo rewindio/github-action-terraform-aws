@@ -11,6 +11,16 @@ on:
         description: "A JSON Array that contains list of all workspaces to apply."
         required: true
         type: string
+      terraform_dir:
+        description: "The path to the terraform files"
+        required: false
+        type: string
+        default: .
+      setup_script:
+        description: "Additional setup to be run before apply (i.e. export TF_VAR_foo=bar)"
+        required: false
+        type: string
+        default: ""
     secrets:
       AWS_ACCESS_KEY_ID:
         description: "The AWS Access Key ID for writing to the backend and managing resources."
@@ -50,14 +60,12 @@ jobs:
               --header 'content-type: application/json')
             mergeable_state=$(jq -r '.mergeable_state' <<< "$resp")
           fi
-          echo "The mergeable state is $mergeable_state"
           echo "::set-output name=mergeable_state::$mergeable_state"
 
       - name: Set varfile
         id: tfvars
         run: |
           # Construct tfvars pattern
-          # TODO: allow for optional override?
           echo "::set-output name=tfvar_file::tfvars/${{ inputs.profile }}/${{ matrix.workspace }}.tfvars"
 
       - name: Set terraform workspace
@@ -65,7 +73,7 @@ jobs:
 
      # This step is needed because a comment on a PR is is in the scope of an issue
       - name: Load PR Details
-        if: steps.mergable.outputs.mergeable_state == 'clean'
+        if: steps.mergable.outputs.mergeable_state == 'clean' && github.event.issue.pull_request 
         id: load-pr
         run: |
           set -eu
@@ -75,11 +83,9 @@ jobs:
             --header 'content-type: application/json')
           sha=$(jq -r '.head.sha' <<< "$resp")
           echo "::set-output name=head_sha::$sha"
-          comments_url=$(jq -r '.comments_url' <<< "$resp")
-          echo "::set-output name=comments_url::$comments_url"
 
       - name: Determine Command
-        if: steps.mergable.outputs.mergeable_state == 'clean'
+        if: steps.mergable.outputs.mergeable_state == 'clean' && github.event.issue.pull_request 
         id: determine-command
         uses: actions/github-script@v6
         env:
@@ -87,7 +93,6 @@ jobs:
         with:
           github-token: ${{github.token}}
           script: |
-            // console.log(context)
             const body = context.payload.comment.body.toLowerCase().trim()
             console.log("Detected PR comment: " + body)
             console.log("This job is for workspace " + process.env.TF_WORKSPACE)
@@ -113,21 +118,29 @@ jobs:
               }
             }
 
-      - name: Comment if not approved
-        if: steps.mergable.outputs.mergeable_state != 'clean' && steps.determine-command.outputs.do_apply == 'true'
+      - name: Comment if not run
+        if: steps.determine-command.outcome == 'skipped'
         id: unmergable_comment
         uses: peter-evans/create-or-update-comment@v1
         with:
           issue-number: ${{ github.event.issue.number }}
           body: |
-            :rotating_light: You cannot apply until the PR is approved and ready to merge
+            :rotating_light: You cannot apply until the PR is both approved and ready to merge
           reactions: eyes
 
-      - name: Checkout
+      - name: Checkout branch
         uses: actions/checkout@v2
+        if: github.event.issue.pull_request 
         with:
           submodules: 'true'
           ref: ${{ steps.load-pr.outputs.head_sha }}
+          token: ${{ secrets.GITHUB_PAT }} # Needed for private submodules
+
+      - name: Checkout main
+        uses: actions/checkout@v2
+        if: github.event_name != 'pull_request' 
+        with:
+          submodules: 'true'
           token: ${{ secrets.GITHUB_PAT }} # Needed for private submodules
 
       # Allow for private terraform modules to be initialized
@@ -156,27 +169,29 @@ jobs:
 
       - name: Terraform Init
         id: init
+        working-directory: ${{ inputs.terraform_dir }}
         run: |
-          # TODO: Allow for optional override
           backend_file=backend/${{ inputs.profile }}.tfvars
           echo "::set-output name=backend_file::$backend_file"
           terraform init -backend-config "$backend_file"
 
       - name: Terraform Apply
         id: apply
-        if: steps.mergable.outputs.mergeable_state == 'clean' && steps.determine-command.outputs.do_apply == 'true'
+        working-directory: ${{ inputs.terraform_dir }}
+        if: (steps.mergable.outputs.mergeable_state == 'clean' && steps.determine-command.outputs.do_apply == 'true') || !github.event.issue.pull_request
         run: |
           set -xo pipefail
+          ${{ inputs.setup_script }}
           terraform apply -no-color -var-file ${{ steps.init.outputs.backend_file }} -var-file ${{ steps.tfvars.outputs.tfvar_file }} -auto-approve |& tee terraform-${{ env.TF_WORKSPACE }}-apply-stdout.txt
 
       - name: Display terraform apply results
         uses: actions/github-script@v6
-        if: always() && steps.mergable.outputs.mergeable_state == 'clean' && steps.determine-command.outputs.do_apply == 'true'
+        if: always() && github.event.issue.pull_request && steps.mergable.outputs.mergeable_state == 'clean' && steps.determine-command.outputs.do_apply == 'true'
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require("fs");
-            const apply = fs.readFileSync("./terraform-${{ env.TF_WORKSPACE }}-apply-stdout.txt").toString();
+            const apply = fs.readFileSync("${{ inputs.terraform_dir }}/terraform-${{ env.TF_WORKSPACE }}-apply-stdout.txt").toString();
             const output = `#### Terraform Apply \`${{ steps.apply.outcome }}\`
             <details><summary>Show Apply</summary>
 
