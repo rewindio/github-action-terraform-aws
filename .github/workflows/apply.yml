@@ -21,6 +21,11 @@ on:
         required: false
         type: string
         default: ""
+      runs_on:
+        description: "The host to run on"
+        required: false
+        type: string
+        default: "ubuntu-latest"
     secrets:
       AWS_ACCESS_KEY_ID:
         description: "The AWS Access Key ID for writing to the backend and managing resources."
@@ -35,7 +40,7 @@ on:
 jobs:
   terraform-apply:
     name: "Apply"
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs_on }}
     env:
       AWS_SHARED_CREDENTIALS_FILE: /tmp/ac
       AWS_PROFILE: ${{ inputs.profile }}
