@@ -244,7 +244,7 @@ jobs:
 
       - name: Notify Slack on Success
         uses: ravsamhq/notify-slack-action@v1
-        if: always() && ${{ steps.secrets.outputs.APPLY_SUCCESS_SLACK_WEBHOOK_URL != '' }}
+        if: always() && ${{ steps.secrets.outputs.APPLY_SUCCESS_SLACK_WEBHOOK_URL }}
         with:
           status: ${{ job.status }}
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -258,7 +258,7 @@ jobs:
 
       - name: Notify Slack on Failure
         uses: ravsamhq/notify-slack-action@v1
-        if: always() && ${{ steps.secrets.outputs.APPLY_FAILURES_SLACK_WEBHOOK_URL != '' }}
+        if: always() && ${{ steps.secrets.outputs.APPLY_FAILURES_SLACK_WEBHOOK_URL }}
         with:
           status: ${{ job.status }}
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -271,7 +271,7 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.APPLY_FAILURES_SLACK_WEBHOOK_URL }}
 
       - name: Find Slack user
-        if: failure() && ${{ steps.secrets.outputs.LOOKUP_USER_EMAIL_SLACK_TOKEN != '' }}
+        if: failure() && ${{ steps.secrets.outputs.LOOKUP_USER_EMAIL_SLACK_TOKEN }}
         id: find-slack-user
         uses: scribd/find-slack-user-action@v1
         with:
@@ -279,7 +279,7 @@ jobs:
           slack-token: ${{ secrets.LOOKUP_USER_EMAIL_SLACK_TOKEN }}
 
       - name: Send a Slack DM to the user linking the failure
-        if: failure() && ${{ steps.secrets.outputs.LOOKUP_USER_EMAIL_SLACK_TOKEN != '' }}
+        if: failure() && ${{ steps.secrets.outputs.LOOKUP_USER_EMAIL_SLACK_TOKEN }}
         uses: archive/github-actions-slack@v2.2.1
         with:
           slack-function: send-message
