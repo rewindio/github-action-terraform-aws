@@ -228,7 +228,8 @@ jobs:
 
       - name: Check if secrets are set
         # Allows for conditionals on secrets without exposing them
-        # https://github.com/actions/runner/issues/520 
+        # https://github.com/actions/runner/issues/520
+        # https://github.community/t/how-can-i-test-if-secrets-are-available-in-an-action/17911/10
         id: secrets-set
         run: |
           echo '::set-output name=APPLY_SUCCESS_SLACK_WEBHOOK_URL::${{secrets.APPLY_SUCCESS_SLACK_WEBHOOK_URL != ''}}'
