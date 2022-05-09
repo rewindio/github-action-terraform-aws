@@ -86,7 +86,7 @@ jobs:
         run: echo TF_WORKSPACE="${{ matrix.workspace }}" >> $GITHUB_ENV
 
       - name: Terraform Setup
-        uses: hashicorp/setup-terraform@v1
+        uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: ${{ steps.set-terraform-version.outputs.terraform-version}}
           terraform_wrapper: false
