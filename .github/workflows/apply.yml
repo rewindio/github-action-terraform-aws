@@ -179,6 +179,7 @@ jobs:
 
       - name: Terraform Setup
         uses: hashicorp/setup-terraform@v1
+        if: (steps.mergable.outputs.mergeable_state == 'clean' && steps.determine-command.outputs.do_apply == 'true') || !github.event.issue.pull_request
         with:
           terraform_version: ${{ steps.set-terraform-version.outputs.terraform-version}}
           terraform_wrapper: false
@@ -186,6 +187,7 @@ jobs:
       - name: Terraform Init
         id: init
         working-directory: ${{ inputs.terraform_dir }}
+        if: (steps.mergable.outputs.mergeable_state == 'clean' && steps.determine-command.outputs.do_apply == 'true') || !github.event.issue.pull_request
         run: |
           backend_file=backend/${{ inputs.profile }}.tfvars
           echo "::set-output name=backend_file::$backend_file"
