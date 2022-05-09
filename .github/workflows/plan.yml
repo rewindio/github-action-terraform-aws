@@ -80,7 +80,7 @@ jobs:
 
       - name: Set terraform version
         id: set-terraform-version
-        run: echo "::set-output name=terraform-version::$(cat .terraform-version)"
+        run: echo "::set-output name=terraform-version::$(cat ${{ inputs.terraform_dir }}/.terraform-version)"
 
       - name: Set terraform workspace
         run: echo TF_WORKSPACE="${{ matrix.workspace }}" >> $GITHUB_ENV
