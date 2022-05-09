@@ -178,12 +178,7 @@ jobs:
         run: echo "::set-output name=terraform-version::$(cat ${{ inputs.terraform_dir }}/.terraform-version)"
 
       - name: Terraform Setup
-<<<<<<< do-not-init-prod
-        uses: hashicorp/setup-terraform@v1
-        if: (steps.mergable.outputs.mergeable_state == 'clean' && steps.determine-command.outputs.do_apply == 'true') || !github.event.issue.pull_request
-=======
         uses: hashicorp/setup-terraform@v2
->>>>>>> main
         with:
           terraform_version: ${{ steps.set-terraform-version.outputs.terraform-version}}
           terraform_wrapper: false
