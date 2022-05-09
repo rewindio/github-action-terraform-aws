@@ -175,7 +175,7 @@ jobs:
 
       - name: Set terraform version
         id: set-terraform-version
-        run: echo "::set-output name=terraform-version::$(cat .terraform-version)"
+        run: echo "::set-output name=terraform-version::$(cat ${{ inputs.terraform_dir }}/.terraform-version)"
 
       - name: Terraform Setup
         uses: hashicorp/setup-terraform@v1
