@@ -175,6 +175,7 @@ jobs:
 
       - name: Set terraform version
         id: set-terraform-version
+        if: (steps.mergable.outputs.mergeable_state == 'clean' && steps.determine-command.outputs.do_apply == 'true') || !github.event.issue.pull_request
         run: echo "::set-output name=terraform-version::$(cat ${{ inputs.terraform_dir }}/.terraform-version)"
 
       - name: Terraform Setup
@@ -186,6 +187,7 @@ jobs:
       - name: Terraform Init
         id: init
         working-directory: ${{ inputs.terraform_dir }}
+        if: (steps.mergable.outputs.mergeable_state == 'clean' && steps.determine-command.outputs.do_apply == 'true') || !github.event.issue.pull_request
         run: |
           backend_file=backend/${{ inputs.profile }}.tfvars
           echo "::set-output name=backend_file::$backend_file"
