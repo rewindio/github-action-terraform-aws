@@ -9,6 +9,7 @@ Reusable terraform github workflows that deploy to AWS, provides cost estimates 
   - [Checkov](#checkov)
   - [Plan](#plan)
   - [Apply](#apply)
+  - [State Unlock](#state-unlock)
 <!-- END mktoc -->
 
 ## Usage
@@ -173,4 +174,43 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.MY_AWS_SECRET_ACCESS_KEY_STAGING }}
       GITHUB_PAT: ${{ secrets.MY_GITHUB_PAT }}
 
+```
+
+### State Unlock
+
+Sometimes state gets locked due to the terraform process ending abruptly (i.e user cancelation or a github runner issue)
+
+This workflow allows unlocking the state when the lock-id is known.
+
+```yaml
+# .github/workflows/tf-state-ulnock.yml
+name: terraform-state-unlock
+concurrency: terraform
+
+on: 
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'The aws profile to use (staging/production)' 
+        required: true
+        default: 'staging'
+      workspace:
+        description: 'The terraform workspace (i.e. my-staging-workspace)' 
+        required: true
+      lock_id:
+        description: 'The terraform lock id in the error' 
+        required: true
+
+jobs:
+  terraform-state-unlock:
+    name: "Terraform"
+    uses: rewindio/github-action-terraform-aws/.github/workflows/state-unlock.yml@state-unlock
+    with:
+      profile: "${{ github.event.inputs.profile }}"
+      lock_id: "${{ github.event.inputs.lock_id }}"
+      workspace: "${{ github.event.inputs.workspace }}"
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_STAGING }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_STAGING }}
+      GITHUB_PAT: ${{ secrets.MY_GITHUB_PAT }}
 ```
