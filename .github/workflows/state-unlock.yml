@@ -7,8 +7,8 @@ on:
         description: "The AWS profile to use (from the config) throughout the workflow"
         required: true
         type: string
-      workspace:
-        description: "The terraform workspace to unlock"
+      workspaces:
+        description: "A JSON Array that contains list of all workspaces to attempt to unlock."
         required: true
         type: string
       lock_id:
@@ -43,6 +43,10 @@ jobs:
     env:
       AWS_SHARED_CREDENTIALS_FILE: /tmp/ac
       AWS_PROFILE: ${{ inputs.profile }}
+    strategy:
+      fail-fast: false
+      matrix:
+        workspace: ${{ fromJson(inputs.workspaces) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -83,7 +87,7 @@ jobs:
           terraform init -backend-config "$backend_file"
 
       - name: Set terraform workspace
-        run: echo TF_WORKSPACE="${{ inputs.workspace }}" >> $GITHUB_ENV
+        run: echo TF_WORKSPACE="${{ matrix.workspace }}" >> $GITHUB_ENV
 
       - name: Terraform Force-unlock
         working-directory: ${{ inputs.terraform_dir }}
