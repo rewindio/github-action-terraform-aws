@@ -9,6 +9,7 @@ Reusable terraform github workflows that deploy to AWS, provides cost estimates 
   - [Checkov](#checkov)
   - [Plan](#plan)
   - [Apply](#apply)
+  - [State Unlock](#state-unlock)
 <!-- END mktoc -->
 
 ## Usage
@@ -173,4 +174,57 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.MY_AWS_SECRET_ACCESS_KEY_STAGING }}
       GITHUB_PAT: ${{ secrets.MY_GITHUB_PAT }}
 
+```
+
+### State Unlock
+
+Sometimes state gets locked due to the terraform process ending abruptly (i.e user cancelation or a github runner issue)
+
+This workflow attempts to unlock the state for all workspaces in the profile with the provided lock_id.
+
+```yaml
+# .github/workflows/tf-state-ulnock.yml
+name: terraform-state-unlock
+
+concurrency: terraform
+
+on: 
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'The aws profile to use (staging/production)' 
+        required: true
+        default: 'staging'
+      lock_id:
+        description: 'The terraform lock id in the error' 
+        required: true
+
+jobs:
+
+  terraform-read-workspaces:
+    name: "Read Workspaces"
+    runs-on: ubuntu-latest
+    outputs:
+      workspaces: ${{ steps.set-workspaces.outputs.workspaces }}
+    steps:
+    - name: checkout
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+    - id: set-workspaces
+      run: |
+        echo "::set-output name=workspaces::$(find tfvars/${{ github.events.inputs.profile }} -name "*.tfvars" -not -type d -exec basename {} \; | cut -d '.' -f1  | jq -R . | jq -cs)"
+
+  terraform-state-unlock:
+    name: "Terraform"
+    uses: rewindio/github-action-terraform-aws/.github/workflows/state-unlock.yml@state-unlock
+    needs: terraform-read-workspaces
+    with:
+      profile: "${{ github.event.inputs.profile }}"
+      lock_id: "${{ github.event.inputs.lock_id }}"
+      workspaces: ${{ needs.terraform-read-workspaces.outputs.workspaces }}
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_STAGING }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_STAGING }}
+      GITHUB_PAT: ${{ secrets.MY_GITHUB_PAT }}
 ```
