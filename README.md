@@ -224,7 +224,7 @@ jobs:
       lock_id: "${{ github.event.inputs.lock_id }}"
       workspaces: ${{ needs.terraform-read-workspaces.outputs.workspaces }}
     secrets:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_STAGING }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_STAGING }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.MY_AWS_ACCESS_KEY_ID_STAGING }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.MY_AWS_SECRET_ACCESS_KEY_STAGING }}
       GITHUB_PAT: ${{ secrets.MY_GITHUB_PAT }}
 ```
