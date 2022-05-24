@@ -178,9 +178,9 @@ jobs:
 
 ### State Unlock
 
-Sometimes state gets locked due to the terraform process ending abruptly (i.e user cancelation or a github runner issue)
+Sometimes state gets locked due to the terraform process ending abruptly (i.e user cancelation or a runner issue).
 
-This workflow attempts to unlock the state for all workspaces in the profile with the provided lock_id.
+This workflow attempts to "brute-force" unlock the state for all workspaces in the profile with the provided lock_id.
 
 ```yaml
 # .github/workflows/tf-state-ulnock.yml
@@ -215,16 +215,31 @@ jobs:
       run: |
         echo "::set-output name=workspaces::$(find tfvars/${{ github.events.inputs.profile }} -name "*.tfvars" -not -type d -exec basename {} \; | cut -d '.' -f1  | jq -R . | jq -cs)"
 
-  terraform-state-unlock:
-    name: "Terraform"
-    uses: rewindio/github-action-terraform-aws/.github/workflows/state-unlock.yml@state-unlock
+  terraform-state-unlock-staging:
+    name: "Unlock"
+    uses: rewindio/github-action-terraform-aws/.github/workflows/state-unlock.yml@v1
     needs: terraform-read-workspaces
+    if: github.event.inputs.profile == 'staging'
     with:
       profile: "${{ github.event.inputs.profile }}"
       lock_id: "${{ github.event.inputs.lock_id }}"
       workspaces: ${{ needs.terraform-read-workspaces.outputs.workspaces }}
     secrets:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_STAGING }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_STAGING }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.MY_AWS_ACCESS_KEY_ID_STAGING }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.MY_AWS_SECRET_ACCESS_KEY_STAGING }}
+      GITHUB_PAT: ${{ secrets.MY_GITHUB_PAT }}
+
+  terraform-state-unlock-production:
+    name: "Unlock"
+    uses: rewindio/github-action-terraform-aws/.github/workflows/state-unlock.yml@v1
+    needs: terraform-read-workspaces
+    if: github.event.inputs.profile == 'production'
+    with:
+      profile: "${{ github.event.inputs.profile }}"
+      lock_id: "${{ github.event.inputs.lock_id }}"
+      workspaces: ${{ needs.terraform-read-workspaces.outputs.workspaces }}
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.MY_AWS_ACCESS_KEY_ID_PRODUCTION }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.MY_AWS_SECRET_ACCESS_KEY_PRODUCTION }}
       GITHUB_PAT: ${{ secrets.MY_GITHUB_PAT }}
 ```
