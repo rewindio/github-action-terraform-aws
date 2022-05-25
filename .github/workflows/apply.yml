@@ -64,8 +64,8 @@ jobs:
         id: mergable
         run: |
           set -eu
-          if [[ "${{ matrix.workspace }}" == "st"* ]]; then
-            # Always allow an apply for a staging environment
+          if [[ "${{ matrix.workspace }}" == "st"* ]] || [[ "${{ !github.event.issue.pull_request }}" == "true" ]]; then
+            # Always work for a staging environment or applies on merge
             mergeable_state='clean'
           else
             resp=$(curl -sSf \
