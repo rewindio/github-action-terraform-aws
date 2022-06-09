@@ -239,6 +239,7 @@ jobs:
             })
 
       - name: Set commit title
+        if: always()
         # https://docs.github.com/en/actions/reference/workflow-commands-for-github-actions#setting-an-environment-variable
         continue-on-error: true
         # We take the first line (%s) from the git log and then escape out any single quotes
