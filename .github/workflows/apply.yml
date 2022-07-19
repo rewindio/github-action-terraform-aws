@@ -55,6 +55,19 @@ on:
       LOOKUP_USER_EMAIL_SLACK_TOKEN:
         description: "A token to look up users by email and message them directly. This requires the GitHub & Slack email to match, and the 'Keep my email addresses private' option disabled. No failures occur in other cases."
         required: false
+      # Optional secrets
+      HONEYBADGER_JS_API_KEY:
+        description: "The HoneyBadger JS API Key. Required if notify_honeybadger is true"
+        required: false
+      NEW_RELIC_API_KEY:
+        description: "The New Relice API Key. Required if notify_new_relic is true"
+        required: false
+      NEW_RELIC_ACCOUNT_ID:
+        description: "The New Relic Account ID. Required if notify_new_relic is true"
+        required: false
+      NEW_RELIC_APPLICATION_ID:
+        description: "The New Relic Application ID. Required if notify_new_relic is true"
+        required: false
 
 jobs:
   terraform-apply:
