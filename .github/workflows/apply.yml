@@ -26,6 +26,16 @@ on:
         required: false
         type: string
         default: "ubuntu-latest"
+      notify_honeybadger:
+        description: "Whether or not to notify HoneyBadger"
+        required: false
+        type: boolean
+        default: false
+      notify_new_relic:
+        description: "Whether or not to notify New Relic"
+        required: false
+        type: boolean
+        default: false
     secrets:
       AWS_ACCESS_KEY_ID:
         description: "The AWS Access Key ID for writing to the backend and managing resources."
@@ -44,6 +54,19 @@ on:
         required: false
       LOOKUP_USER_EMAIL_SLACK_TOKEN:
         description: "A token to look up users by email and message them directly. This requires the GitHub & Slack email to match, and the 'Keep my email addresses private' option disabled. No failures occur in other cases."
+        required: false
+      # Optional secrets
+      HONEYBADGER_JS_API_KEY:
+        description: "The HoneyBadger JS API Key. Required if notify_honeybadger is true"
+        required: false
+      NEW_RELIC_API_KEY:
+        description: "The New Relice API Key. Required if notify_new_relic is true"
+        required: false
+      NEW_RELIC_ACCOUNT_ID:
+        description: "The New Relic Account ID. Required if notify_new_relic is true"
+        required: false
+      NEW_RELIC_APPLICATION_ID:
+        description: "The New Relic Application ID. Required if notify_new_relic is true"
         required: false
 
 jobs:
@@ -298,3 +321,19 @@ jobs:
         if: always()
         run: |
           rm -f "$AWS_SHARED_CREDENTIALS_FILE"
+      - name: Mark Release in HoneyBadger
+        if: inputs.notify_honeybadger == true
+        uses: honeybadger-io/github-notify-deploy-action@v1
+        with:
+          api_key: ${{ secrets.HONEYBADGER_JS_API_KEY }}
+          environment: ${{ matrix.env }}
+
+      - name: Mark Release in New Relic
+        if: inputs.notify_new_relic == true
+        uses: newrelic/deployment-marker-action@v1
+        with:
+          apiKey: ${{ secrets.NEW_RELIC_API_KEY }}
+          accountId: ${{ secrets.NEW_RELIC_ACCOUNT_ID }}
+          applicationId: ${{ secrets.NEW_RELIC_APPLICATION_ID }}
+          revision: "${{ github.ref }}-${{ github.sha }}"
+          user: "${{ github.actor }}"
