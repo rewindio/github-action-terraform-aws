@@ -26,6 +26,14 @@ on:
         required: false
         type: string
         default: "ubuntu-latest"
+      notify_honeybadger:
+        description: "Whether or not to notify HoneyBadger"
+        required: false
+        type: boolean
+      notify_new_relic:
+        description: "Whether or not to notify New Relic"
+        required: false
+        type: boolean
     secrets:
       AWS_ACCESS_KEY_ID:
         description: "The AWS Access Key ID for writing to the backend and managing resources."
@@ -298,3 +306,19 @@ jobs:
         if: always()
         run: |
           rm -f "$AWS_SHARED_CREDENTIALS_FILE"
+      - name: Mark Release in HoneyBadger
+        if: inputs.notify_honeybadger == true
+        uses: honeybadger-io/github-notify-deploy-action@v1
+        with:
+          api_key: ${{ secrets.HONEYBADGER_JS_API_KEY }}
+          environment: ${{ matrix.env }}
+
+      - name: Mark Release in New Relic
+        if: inputs.notify_new_relic == true
+        uses: newrelic/deployment-marker-action@v1
+        with:
+          apiKey: ${{ secrets.NEW_RELIC_API_KEY }}
+          accountId: ${{ secrets.NEW_RELIC_ACCOUNT_ID }}
+          applicationId: ${{ secrets.NEW_RELIC_APPLICATION_ID }}
+          revision: "${{ github.ref }}-${{ github.sha }}"
+          user: "${{ github.actor }}"
