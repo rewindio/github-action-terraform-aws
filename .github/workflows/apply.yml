@@ -30,10 +30,12 @@ on:
         description: "Whether or not to notify HoneyBadger"
         required: false
         type: boolean
+        default: false
       notify_new_relic:
         description: "Whether or not to notify New Relic"
         required: false
         type: boolean
+        default: false
     secrets:
       AWS_ACCESS_KEY_ID:
         description: "The AWS Access Key ID for writing to the backend and managing resources."
